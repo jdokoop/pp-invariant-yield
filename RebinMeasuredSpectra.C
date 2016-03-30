@@ -190,6 +190,14 @@ void writeToFile()
 {
 	TFile *fout = new TFile("WorkingFiles/normalizedSpectra.root", "RECREATE");
 
+	for(int i=0; i<NSECT; i++)
+	{
+		h_dNdpT_truth[i]->Write();
+		h_dNdpT_reco[i]->Write();
+		h_dNdpT_data[i]->Write();
+
+		h_correction[i]->Write();
+	}
 }
 
 void RebinMeasuredSpectra()
@@ -199,5 +207,5 @@ void RebinMeasuredSpectra()
 	normalizeHistograms();
 	computeCorrection();
 	plot();
-	//writeToFile();
+	writeToFile();
 }
