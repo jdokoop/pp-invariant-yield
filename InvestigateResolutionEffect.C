@@ -91,10 +91,24 @@ void plot()
 	TF1 *polFit = (TF1*) g_resolution->GetFunction("fit");
 	g_resolution->Draw("AP");
 	polFit->Draw("same");
+
+	TCanvas *cSpectrum = new TCanvas("cSpectrum","cSpectrum",600,600);
+	h_dNdEta_true->SetTitle("");
+	h_dNdEta_true->GetXaxis()->SetTitle("p_{T} [GeV/c]");
+	h_dNdEta_true->GetYaxis()->SetTitle("Counts");
+	h_dNdEta_true->SetMarkerStyle(20);
+	h_dNdEta_true->SetMarkerColor(kGreen+3);
+
+	h_dNdEta_smeared->SetMarkerStyle(20);
+	h_dNdEta_smeared->SetMarkerColor(kRed);
+	h_dNdEta_true->Draw("P");
+	h_dNdEta_smeared->Draw("P,same");
 }
 
 void InvestigateResolutionEffect()
 {
+	gStyle->SetErrorX(0.0001);
+
 	fitResolution();
 	smearTruth();
 	plot();
