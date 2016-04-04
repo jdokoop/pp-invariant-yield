@@ -47,6 +47,14 @@ TH1F *h_dNdpT_data[NSECT];
 //Acceptance and Efficiency Correction
 TH1F *h_correction[NSECT];
 
+//Phi distribution
+TH1F *h_phi_reco[NSECT];
+TH1F *h_phi_data[NSECT];
+
+//Chisq distribution
+TH1F *h_chisqndf_reco[NSECT];
+TH1F *h_chisqndf_data[NSECT];
+
 string zvtxcut  = "TMath::Abs(vtx[2]) < 5";
 string chisqcut = "chisq/ndf < 3";
 string dcacut   = "TMath::Abs(dca) < 0.15";
@@ -58,7 +66,7 @@ string eta2cut = "TMath::Abs(TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom
 
 //Sector cuts
 string inclusivephi = "TMath::ATan2(mom[1],mom[0]) < TMath::Pi()";
-                      string ebcut    = "TMath::ATan2(mom[1],mom[0]) < -1*TMath::Pi()/2";
+string ebcut    = "TMath::ATan2(mom[1],mom[0]) < -1*TMath::Pi()/2";
 string etcut    = "TMath::ATan2(mom[1],mom[0]) > TMath::Pi()/2";
 string wtcut    = "TMath::ATan2(mom[1],mom[0]) > 0 && TMath::ATan2(mom[1],mom[0]) < TMath::Pi()/2";
 string wbcut    = "TMath::ATan2(mom[1],mom[0]) < 0 && TMath::ATan2(mom[1],mom[0]) > -1*TMath::Pi()/2";
@@ -91,6 +99,7 @@ void readFiles()
 	//Extract raw pT distributions for each case
 	for (int i = 0; i < NSECT; i++)
 	{
+		//Spectra
 		ntp_svxseg_true->Draw(Form("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h_DeltaNDeltapT_truth_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), Form("%s && %s && %s", momcut.c_str(), eta1cut.c_str(), sectorCut[i].c_str()), "goff");
 		h_DeltaNDeltapT_truth[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_truth_%s", sectorLabel[i].c_str()));
 
@@ -99,6 +108,20 @@ void readFiles()
 
 		ntp_svxseg_data->Draw(Form("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h_DeltaNDeltapT_data_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
 		h_DeltaNDeltapT_data[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_data_%s", sectorLabel[i].c_str()));
+
+		//Azimuthal angle distributions
+		ntp_svxseg_reco->Draw(Form("TMath::ATan2(mom[1],mom[0])>>h_phi_reco_%s(200,-3.5,3.5)", sectorLabel[i].c_str()), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
+		h_phi_reco[i] = (TH1F*) gDirectory->FindObject(Form("h_phi_reco_%s", sectorLabel[i].c_str()));
+
+		ntp_svxseg_data->Draw(Form("TMath::ATan2(mom[1],mom[0])>>h_phi_data_%s(200,-3.5,3.5)", sectorLabel[i].c_str()), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
+		h_phi_data[i] = (TH1F*) gDirectory->FindObject(Form("h_phi_data_%s", sectorLabel[i].c_str()));
+
+		//Chi square distributions
+		ntp_svxseg_reco->Draw(Form("chisq/ndf>>h_chisqndf_reco_%s(100,0,10)", sectorLabel[i].c_str()), (eta2cut + "&&" + zvtxcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
+		h_chisqndf_reco[i] = (TH1F*) gDirectory->FindObject(Form("h_chisqndf_reco_%s", sectorLabel[i].c_str()));
+
+		ntp_svxseg_data->Draw(Form("chisq/ndf>>h_chisqndf_data_%s(100,0,10)", sectorLabel[i].c_str()), (eta2cut + "&&" + zvtxcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
+		h_chisqndf_data[i] = (TH1F*) gDirectory->FindObject(Form("h_chisqndf_data_%s", sectorLabel[i].c_str()));
 	}
 
 	//Set errors on these histograms since they just contain counts
@@ -148,12 +171,27 @@ void normalizeHistograms()
 		h_dNdpT_reco[i]->Scale(1.0 / 2 * TMath::Pi());
 		h_dNdpT_data[i]->Scale(1.0 / 2 * TMath::Pi());
 
+		if (i > 0)
+		{
+			h_dNdpT_truth[i]->Scale(4.0);
+			h_dNdpT_reco[i]->Scale(4.0);
+			h_dNdpT_data[i]->Scale(4.0);
+		}
+
 		for (int j = 1; j <= NBINS; j++)
 		{
 			h_dNdpT_truth[i]->SetBinContent(j, h_dNdpT_truth[i]->GetBinContent(j) / h_dNdpT_truth[i]->GetBinCenter(j));
 			h_dNdpT_reco[i]->SetBinContent(j, h_dNdpT_reco[i]->GetBinContent(j) / h_dNdpT_reco[i]->GetBinCenter(j));
 			h_dNdpT_data[i]->SetBinContent(j, h_dNdpT_data[i]->GetBinContent(j) / h_dNdpT_data[i]->GetBinCenter(j));
 		}
+
+		//Normalize phi distributions to unit integral
+		h_phi_data[i]->Scale(1.0 / h_phi_data[i]->Integral());
+		h_phi_reco[i]->Scale(1.0 / h_phi_reco[i]->Integral());
+
+		//Normalize chisq distributions to unit at the maximum point
+		h_chisqndf_data[i]->Scale(1.0 / h_chisqndf_data[i]->GetMaximum());
+		h_chisqndf_reco[i]->Scale(1.0 / h_chisqndf_reco[i]->GetMaximum());
 	}
 }
 
@@ -161,7 +199,7 @@ void computeCorrection()
 {
 	for (int i = 0; i < NSECT; i++)
 	{
-		h_correction[i] = (TH1F*) h_dNdpT_reco[i]->Clone("h_correction");
+		h_correction[i] = (TH1F*) h_dNdpT_reco[i]->Clone(Form("h_correction_%s", sectorLabel[i].c_str()));
 		h_correction[i]->Divide(h_dNdpT_truth[i]);
 	}
 }
@@ -172,31 +210,37 @@ void plot()
 
 	TCanvas *c1 = new TCanvas("c1", "Truth", 600, 600);
 	h_dNdpT_truth[0]->SetLineColor(kBlack);
-	h_dNdpT_truth[0]->Draw();
+	h_dNdpT_truth[1]->Draw();
 
 	TCanvas *c2 = new TCanvas("c2", "Reco", 600, 600);
-	h_dNdpT_reco[0]->SetLineColor(kBlue);
-	h_dNdpT_reco[0]->Draw();
+	h_dNdpT_reco[1]->SetLineColor(kBlue);
+	h_dNdpT_reco[1]->Draw();
 
 	TCanvas *c3 = new TCanvas("c3", "Data", 600, 600);
-	h_dNdpT_data[0]->SetLineColor(kRed);
-	h_dNdpT_data[0]->Draw();
+	h_dNdpT_data[1]->SetLineColor(kRed);
+	h_dNdpT_data[1]->Draw();
 
 	TCanvas *c4 = new TCanvas("c4", "Acceptance and Efficiency Correction");
-	h_correction[0]->Draw();
+	h_correction[1]->Draw();
 }
 
 void writeToFile()
 {
-	TFile *fout = new TFile("WorkingFiles/normalizedSpectra.root", "RECREATE");
+	TFile *fout = new TFile("WorkingFiles/normalizedSpectra_phi_chisq.root", "RECREATE");
 
-	for(int i=0; i<NSECT; i++)
+	for (int i = 0; i < NSECT; i++)
 	{
 		h_dNdpT_truth[i]->Write();
 		h_dNdpT_reco[i]->Write();
 		h_dNdpT_data[i]->Write();
 
 		h_correction[i]->Write();
+
+		h_phi_reco[i]->Write();
+		h_phi_data[i]->Write();
+
+		h_chisqndf_reco[i]->Write();
+		h_chisqndf_data[i]->Write();
 	}
 }
 
