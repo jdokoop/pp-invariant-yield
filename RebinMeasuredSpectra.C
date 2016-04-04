@@ -55,6 +55,10 @@ TH1F *h_phi_data[NSECT];
 TH1F *h_chisqndf_reco[NSECT];
 TH1F *h_chisqndf_data[NSECT];
 
+//Pseudorapidity distributions for selected azimuthal regions
+TH1F *h_eta_regions_data[4];
+TH1F *h_eta_regions_reco[4];
+
 string zvtxcut  = "TMath::Abs(vtx[2]) < 5";
 string chisqcut = "chisq/ndf < 3";
 string dcacut   = "TMath::Abs(dca) < 0.15";
@@ -73,6 +77,12 @@ string wbcut    = "TMath::ATan2(mom[1],mom[0]) < 0 && TMath::ATan2(mom[1],mom[0]
 
 string sectorLabel[NSECT] = {"INCLUSIVE", "ET", "EB", "WT", "WB"};
 string sectorCut[NSECT] = {inclusivephi, etcut, ebcut, wtcut, wbcut};
+
+//Cuts for selected regions with phi discrepancy
+string phiregion1cut = "TMath::ATan2(mom[1],mom[0]) > -2.6 && TMath::ATan2(mom[1],mom[0]) < -2.0";
+string phiregion2cut = "TMath::ATan2(mom[1],mom[0]) > -1.0 && TMath::ATan2(mom[1],mom[0]) < -0.6";
+string phiregion3cut = "TMath::ATan2(mom[1],mom[0]) > -0.2 && TMath::ATan2(mom[1],mom[0]) < 0.2";
+string phiregion4cut = "TMath::ATan2(mom[1],mom[0]) > 0.6 && TMath::ATan2(mom[1],mom[0]) < 1.0";
 
 //---------------------------------------
 // Functions
@@ -123,6 +133,30 @@ void readFiles()
 		ntp_svxseg_data->Draw(Form("chisq/ndf>>h_chisqndf_data_%s(100,0,10)", sectorLabel[i].c_str()), (eta2cut + "&&" + zvtxcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
 		h_chisqndf_data[i] = (TH1F*) gDirectory->FindObject(Form("h_chisqndf_data_%s", sectorLabel[i].c_str()));
 	}
+
+	ntp_svxseg_data->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_data_1(200,-0.4,0.4)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion1cut).c_str(), "goff");
+	h_eta_regions_data[0] = (TH1F*) gDirectory->FindObject("h_eta_regions_data_1");
+
+	ntp_svxseg_data->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_data_2(200,-0.4,0.4)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion2cut).c_str(), "goff");
+	h_eta_regions_data[1] = (TH1F*) gDirectory->FindObject("h_eta_regions_data_2");
+
+	ntp_svxseg_data->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_data_3(200,-0.4,0.4)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion3cut).c_str(), "goff");
+	h_eta_regions_data[2] = (TH1F*) gDirectory->FindObject("h_eta_regions_data_3");
+
+	ntp_svxseg_data->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_data_4(200,-0.4,0.4)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion4cut).c_str(), "goff");
+	h_eta_regions_data[3] = (TH1F*) gDirectory->FindObject("h_eta_regions_data_4");
+
+	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_1(200,-0.4,0.4)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion1cut).c_str(), "goff");
+	h_eta_regions_reco[0] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_1");
+
+	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_2(200,-0.4,0.4)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion2cut).c_str(), "goff");
+	h_eta_regions_reco[1] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_2");
+
+	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_3(200,-0.4,0.4)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion3cut).c_str(), "goff");
+	h_eta_regions_reco[2] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_3");
+
+	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_4(200,-0.4,0.4)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion4cut).c_str(), "goff");
+	h_eta_regions_reco[3] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_4");
 
 	//Set errors on these histograms since they just contain counts
 	for (int i = 0; i < NSECT; i++)
@@ -193,6 +227,12 @@ void normalizeHistograms()
 		h_chisqndf_data[i]->Scale(1.0 / h_chisqndf_data[i]->GetMaximum());
 		h_chisqndf_reco[i]->Scale(1.0 / h_chisqndf_reco[i]->GetMaximum());
 	}
+
+	for (int i = 0; i < 4; i++)
+	{
+		h_eta_regions_reco[i]->Scale(1.0 / h_eta_regions_reco[i]->Integral());
+		h_eta_regions_data[i]->Scale(1.0 / h_eta_regions_data[i]->Integral());
+	}
 }
 
 void computeCorrection()
@@ -241,6 +281,12 @@ void writeToFile()
 
 		h_chisqndf_reco[i]->Write();
 		h_chisqndf_data[i]->Write();
+	}
+
+	for(int i=0; i<4; i++)
+	{	
+		h_eta_regions_reco[i]->Write();
+		h_eta_regions_data[i]->Write();
 	}
 }
 
