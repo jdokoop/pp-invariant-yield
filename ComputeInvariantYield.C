@@ -24,11 +24,18 @@ TGraphErrors *g_correction[NSECT];
 TH1F *h_phi_data[NSECT];
 TH1F *h_phi_reco[NSECT];
 
+//Eta distributions for odd phi regions
+TH1F *h_eta_regions_data[4];
+TH1F *h_eta_regions_reco[4];
+
 //Chisd distributions
 TH1F *h_chisqndf_data[NSECT];
 
 //Label for each azimuthal sector
 string sectorLabel[NSECT] = {"INCLUSIVE", "ET", "EB", "WT", "WB"};
+
+//Label for anomalous phi regions
+string phiLabel[4] = {"-2.6 < #phi < -2.0", "-1.0 < #phi < -0.6", "-0.2 < #phi < 0.2", "0.6 < #phi < 1.0"};
 
 //Colors for plotting yields
 int yieldColor[NSECT] = {kBlack, kOrange + 1, kBlue, kRed, kGreen + 3};
@@ -65,6 +72,12 @@ void readFiles()
 		h_phi_reco[i] = (TH1F*) fin->Get(Form("h_phi_reco_%s", sectorLabel[i].c_str()));
 
 		h_chisqndf_data[i] = (TH1F*) fin->Get(Form("h_chisqndf_data_%s", sectorLabel[i].c_str()));
+	}
+
+	for (int i = 0; i < 4; i++)
+	{
+		h_eta_regions_reco[i] = (TH1F*) fin->Get(Form("h_eta_regions_reco_%i", i + 1));
+		h_eta_regions_data[i] = (TH1F*) fin->Get(Form("h_eta_regions_data_%i", i + 1));
 	}
 
 	//Get hadron spectrum from PPG030
@@ -420,12 +433,49 @@ void plotChisq()
 		h_chisqndf_data[i]->Draw();
 	}
 
-	TCanvas *cChisqAll = new TCanvas("cChisqAll","cChisqAll",600,600);
+	TCanvas *cChisqAll = new TCanvas("cChisqAll", "cChisqAll", 600, 600);
 	h_chisqndf_data[1]->Draw();
 	h_chisqndf_data[2]->Draw("same");
 	h_chisqndf_data[3]->Draw("same");
 	h_chisqndf_data[4]->Draw("same");
+}
 
+void plotEta()
+{
+	TCanvas *cEta = new TCanvas("cEta", "Chisq/ndf for Each Sector", 800, 800);
+	cEta->Divide(2, 2);
+
+	for (int i = 0; i < 4; i++)
+	{
+		cEta->cd(i+1);
+		gPad->SetLogy();
+
+		h_eta_regions_data[i]->Rebin(4);
+		h_eta_regions_reco[i]->Rebin(4);
+
+		h_eta_regions_data[i]->SetLineWidth(2);
+		h_eta_regions_data[i]->SetTitle(phiLabel[i].c_str());
+		h_eta_regions_data[i]->GetXaxis()->SetLabelFont(62);
+		h_eta_regions_data[i]->GetXaxis()->SetTitleFont(62);
+		h_eta_regions_data[i]->GetXaxis()->SetLabelSize(62);
+		h_eta_regions_data[i]->GetXaxis()->SetLabelSize(0.04);
+		h_eta_regions_data[i]->GetXaxis()->SetTitleSize(0.04);
+		h_eta_regions_data[i]->GetXaxis()->SetTitle("#eta");
+
+		//h_eta_regions_data[i]->GetYaxis()->SetRangeUser(1e-4, 10);
+		h_eta_regions_data[i]->GetYaxis()->SetLabelFont(62);
+		h_eta_regions_data[i]->GetYaxis()->SetTitleFont(62);
+		h_eta_regions_data[i]->GetYaxis()->SetLabelSize(62);
+		h_eta_regions_data[i]->GetYaxis()->SetLabelSize(0.04);
+		h_eta_regions_data[i]->GetYaxis()->SetTitleSize(0.04);
+		h_eta_regions_data[i]->GetYaxis()->SetTitle("A.U.");
+
+		h_eta_regions_data[i]->SetLineColor(kBlue);
+		h_eta_regions_reco[i]->SetLineColor(kRed);
+
+		h_eta_regions_data[i]->Draw();
+		h_eta_regions_reco[i]->Draw("same");
+	}
 }
 
 void ComputeInvariantYield()
@@ -454,4 +504,5 @@ void ComputeInvariantYield()
 	//Plot other track variables
 	plotPhi();
 	plotChisq();
+	plotEta();
 }
