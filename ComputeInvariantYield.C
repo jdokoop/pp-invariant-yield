@@ -202,12 +202,14 @@ void plotTruthReco()
 
 void plotInvariantYield()
 {
-	TCanvas *c1 = new TCanvas("c1", "Invariant Yield for all Sectors", 800, 600);
-	c1->Divide(1, 2);
+	TCanvas *c1 = new TCanvas("c1", "Invariant Yield for all Sectors", 500, 900);
+	c1->Divide(1, 2, 0, 0);
 
 	c1->cd(1);
+	gPad->SetPad(.005, .3, .9, .92 );
 	gPad->SetLogy();
-
+	gPad->SetTickx();
+	gPad->SetTicky();
 	for (int i = 0; i < NSECT; i++)
 	{
 		g_dNdpT_data[i]->SetLineColor(yieldColor[i]);
@@ -221,16 +223,16 @@ void plotInvariantYield()
 	g_dNdpT_data[0]->GetXaxis()->SetLabelFont(62);
 	g_dNdpT_data[0]->GetXaxis()->SetTitleFont(62);
 	g_dNdpT_data[0]->GetXaxis()->SetLabelSize(62);
-	g_dNdpT_data[0]->GetXaxis()->SetLabelSize(0.07);
-	g_dNdpT_data[0]->GetXaxis()->SetTitleSize(0.07);
+	g_dNdpT_data[0]->GetXaxis()->SetLabelSize(0.04);
+	g_dNdpT_data[0]->GetXaxis()->SetTitleSize(0.04);
 	g_dNdpT_data[0]->GetXaxis()->SetTitle("p_{T} [GeV/c]");
 
-	g_dNdpT_data[0]->GetYaxis()->SetRangeUser(1e-4, 10.0);
+	g_dNdpT_data[0]->GetYaxis()->SetRangeUser(1e-4 + 0.0001, 10.0);
 	g_dNdpT_data[0]->GetYaxis()->SetLabelFont(62);
 	g_dNdpT_data[0]->GetYaxis()->SetTitleFont(62);
 	g_dNdpT_data[0]->GetYaxis()->SetLabelSize(62);
-	g_dNdpT_data[0]->GetYaxis()->SetLabelSize(0.07);
-	g_dNdpT_data[0]->GetYaxis()->SetTitleSize(0.07);
+	g_dNdpT_data[0]->GetYaxis()->SetLabelSize(0.04);
+	g_dNdpT_data[0]->GetYaxis()->SetTitleSize(0.04);
 	g_dNdpT_data[0]->GetYaxis()->SetTitle("1/N_{evt} 1/2#pi p_{T} dN/dp_{T}d#eta");
 
 	g_dNdpT_data[0]->Draw("AP");
@@ -240,27 +242,31 @@ void plotInvariantYield()
 	g_dNdpT_data[4]->Draw("P,same");
 
 	tsallisSectorFit[0]->Draw("same");
-	tsallisSectorFit[1]->Draw("same");
-	tsallisSectorFit[2]->Draw("same");
-	tsallisSectorFit[3]->Draw("same");
-	tsallisSectorFit[4]->Draw("same");
+	//tsallisSectorFit[1]->Draw("same");
+	//tsallisSectorFit[2]->Draw("same");
+	//tsallisSectorFit[3]->Draw("same");
+	//tsallisSectorFit[4]->Draw("same");
 
 	c1->cd(2);
+	gPad->SetPad(.005, .005, .9, .3);
+	gPad->SetTickx();
+	gPad->SetTicky();
+
 	tsallisSectorRatio[0]->SetTitle();
 	tsallisSectorRatio[0]->GetXaxis()->SetRangeUser(0.2, 2.0);
 	tsallisSectorRatio[0]->GetXaxis()->SetLabelFont(62);
 	tsallisSectorRatio[0]->GetXaxis()->SetTitleFont(62);
 	tsallisSectorRatio[0]->GetXaxis()->SetLabelSize(62);
-	tsallisSectorRatio[0]->GetXaxis()->SetLabelSize(0.07);
-	tsallisSectorRatio[0]->GetXaxis()->SetTitleSize(0.07);
+	tsallisSectorRatio[0]->GetXaxis()->SetLabelSize(0.04);
+	tsallisSectorRatio[0]->GetXaxis()->SetTitleSize(0.04);
 	tsallisSectorRatio[0]->GetXaxis()->SetTitle("p_{T} [GeV/c]");
 
-	tsallisSectorRatio[0]->GetYaxis()->SetRangeUser(0.0, 10.0);
+	tsallisSectorRatio[0]->GetYaxis()->SetRangeUser(0.0, 2.44);
 	tsallisSectorRatio[0]->GetYaxis()->SetLabelFont(62);
 	tsallisSectorRatio[0]->GetYaxis()->SetTitleFont(62);
 	tsallisSectorRatio[0]->GetYaxis()->SetLabelSize(62);
-	tsallisSectorRatio[0]->GetYaxis()->SetLabelSize(0.07);
-	tsallisSectorRatio[0]->GetYaxis()->SetTitleSize(0.07);
+	tsallisSectorRatio[0]->GetYaxis()->SetLabelSize(0.04);
+	tsallisSectorRatio[0]->GetYaxis()->SetTitleSize(0.04);
 	tsallisSectorRatio[0]->GetYaxis()->SetTitle("Points / Inclusive Fit");
 
 	tsallisSectorRatio[0]->SetLineWidth(2);
@@ -269,11 +275,15 @@ void plotInvariantYield()
 	tsallisSectorRatio[3]->SetLineWidth(2);
 	tsallisSectorRatio[4]->SetLineWidth(2);
 
-	tsallisSectorRatio[0]->Draw("ALP");
-	tsallisSectorRatio[1]->Draw("LP,same");
-	tsallisSectorRatio[2]->Draw("LP,same");
-	tsallisSectorRatio[3]->Draw("LP,same");
-	tsallisSectorRatio[4]->Draw("LP,same");
+	tsallisSectorRatio[0]->Draw("AP");
+	tsallisSectorRatio[1]->Draw("P,same");
+	tsallisSectorRatio[2]->Draw("P,same");
+	tsallisSectorRatio[3]->Draw("P,same");
+	tsallisSectorRatio[4]->Draw("P,same");
+
+	TLine *tlUnity = new TLine(0.2, 1.0, 2.0, 1.0);
+	tlUnity->SetLineStyle(7);
+	tlUnity->Draw("same");
 
 	TCanvas *c2 = new TCanvas("c2", "Invariant Yield for all Sectors", 600, 600);
 	c2->SetLogy();
@@ -293,6 +303,7 @@ void plotInvariantYield()
 	gHadrons->Draw("P,same");
 
 	TCanvas *c3 = new TCanvas("c3", "Invariant Yield for Inclusive Azimuth", 600, 600);
+	c3->SetLogy();
 	g_dNdpT_data[0]->Draw("AP");
 	gHadrons->SetMarkerStyle(28);
 	gHadrons->SetMarkerColor(kViolet);
@@ -434,10 +445,15 @@ void plotChisq()
 	}
 
 	TCanvas *cChisqAll = new TCanvas("cChisqAll", "cChisqAll", 600, 600);
+	cChisqAll->SetLogy();
 	h_chisqndf_data[1]->Draw();
 	h_chisqndf_data[2]->Draw("same");
 	h_chisqndf_data[3]->Draw("same");
 	h_chisqndf_data[4]->Draw("same");
+
+	TLine *tlChisq = new TLine(3.0, 1e-4, 3.0, 10);
+	tlChisq->SetLineStyle(7);
+	tlChisq->Draw("same");
 }
 
 void plotEta()
@@ -447,7 +463,7 @@ void plotEta()
 
 	for (int i = 0; i < 4; i++)
 	{
-		cEta->cd(i+1);
+		cEta->cd(i + 1);
 		gPad->SetLogy();
 
 		h_eta_regions_data[i]->Rebin(4);
