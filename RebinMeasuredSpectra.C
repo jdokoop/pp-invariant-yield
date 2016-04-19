@@ -25,7 +25,7 @@ const int NBINS_RB = 12;
 const int NSECT = 5;
 
 //Number of events in each file
-int nevents_truth = 2000000;
+int nevents_truth = 0;
 int nevents_reco  = 0;
 int nevents_data  = 0;
 
@@ -68,9 +68,12 @@ string chisqcut = "chisq/ndf < 3";
 string dcacut   = "TMath::Abs(dca) < 0.15";
 string dca2dcut = "TMath::Abs(dca2d) < 0.05";
 string momcut   = "TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 0.2";
+string momtruthcut   = "TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1]) > 0.2";
 string nhitscut = "nhits[0]+nhits[1]+nhits[2]+nhits[3] == 4";
 string eta1cut = "TMath::Abs(eta) < 0.35";
 string eta2cut = "TMath::Abs(TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) < 0.35";
+string etatruthcut = "TMath::Abs(TMath::ATanH(mom_truth[2]/TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1] + mom_truth[2]*mom_truth[2]))) < 0.35";
+string bbccut = "bbcqs + bbcqn > 2.0";
 
 //Sector cuts
 string inclusivephi = "TMath::ATan2(mom[1],mom[0]) < TMath::Pi()";
@@ -79,8 +82,15 @@ string etcut    = "TMath::ATan2(mom[1],mom[0]) > TMath::Pi()/2";
 string wtcut    = "TMath::ATan2(mom[1],mom[0]) > 0 && TMath::ATan2(mom[1],mom[0]) < TMath::Pi()/2";
 string wbcut    = "TMath::ATan2(mom[1],mom[0]) < 0 && TMath::ATan2(mom[1],mom[0]) > -1*TMath::Pi()/2";
 
+string inclusivephitruth = "TMath::ATan2(mom_truth[1],mom_truth[0]) < TMath::Pi()";
+string ebcuttruth    = "TMath::ATan2(mom_truth[1],mom_truth[0]) < -1*TMath::Pi()/2";
+string etcuttruth    = "TMath::ATan2(mom_truth[1],mom_truth[0]) > TMath::Pi()/2";
+string wtcuttruth    = "TMath::ATan2(mom_truth[1],mom_truth[0]) > 0 && TMath::ATan2(mom_truth[1],mom_truth[0]) < TMath::Pi()/2";
+string wbcuttruth    = "TMath::ATan2(mom_truth[1],mom_truth[0]) < 0 && TMath::ATan2(mom_truth[1],mom_truth[0]) > -1*TMath::Pi()/2";
+
 string sectorLabel[NSECT] = {"INCLUSIVE", "ET", "EB", "WT", "WB"};
 string sectorCut[NSECT] = {inclusivephi, etcut, ebcut, wtcut, wbcut};
+string sectorCutTruth[NSECT] = {inclusivephitruth, etcuttruth, ebcuttruth, wtcuttruth, wbcuttruth};
 
 //Cuts for selected regions with phi discrepancy
 string phiregion1cut = "TMath::ATan2(mom[1],mom[0]) > 2.4 && TMath::ATan2(mom[1],mom[0]) < 3.1";
@@ -95,19 +105,59 @@ TTree *ntp_event_reco;
 TTree *ntp_svxseg_data;
 TTree *ntp_event_data;
 
+//Files to read
+TFile *f_reco;
+TFile *f_data;
+
 //---------------------------------------
 // Functions
 //---------------------------------------
 
+void getTruthInformation()
+{
+	//The truth information is contained in the npt_svxseg_ampt tree
+	//Select only tracks for events with BBCS + BBCN > 2
+	ntp_svxseg_true = (TTree*) f_reco->Get("ntp_svxseg_ampt");
+
+	for (int i = 0; i < NSECT; i++)
+	{
+		ntp_svxseg_true->Draw(Form("TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1])>>h_DeltaNDeltapT_truth_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), Form("%s && %s && %s && %s", momtruthcut.c_str(), etatruthcut.c_str(), sectorCutTruth[i].c_str(), bbccut.c_str()), "goff");
+		h_DeltaNDeltapT_truth[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_truth_%s", sectorLabel[i].c_str()));
+	}
+
+	//Count the number of events that fire the BBC trigger
+	int eventno;
+	float bbcqs;
+	float bbcqn;
+	int lastEvent = -1;
+	ntp_svxseg_true->SetBranchAddress("eventno", &eventno);
+	ntp_svxseg_true->SetBranchAddress("bbcqn", &bbcqn);
+	ntp_svxseg_true->SetBranchAddress("bbcqs", &bbcqs);
+cout << "Starting Truth Processing" << endl;
+	for (int i = 0; i < ntp_svxseg_true->GetEntries(); i++)
+	{
+		if(i%1000 == 0) cout << "Track " << i << endl;
+		ntp_svxseg_true->GetEntry(i);
+		if (bbcqs + bbcqn >= 2.0)
+		{
+			if (eventno != lastEvent)
+			{
+				lastEvent = eventno;
+				nevents_truth++;
+			}
+		}
+	}
+
+	cout << "NEVENTS TRUTH = " << nevents_truth << endl;
+}
+
 void readFiles()
 {
 	//Read in files
-	TFile *f_true = new TFile("Data/ampt_true_1.root");
-	TFile *f_reco    = new TFile("Data/423844_ana_newmat_1.root");
-	TFile *f_data  = new TFile("Data/423844_data_1_1_1.root");
+	f_reco    = new TFile("Data/423844_ana_newmat_1.root");
+	f_data  = new TFile("Data/423844_data_1_1_1.root");
 
 	//Extract relevant NTuples
-	ntp_svxseg_true = (TTree*) f_true->Get("ntp_svxseg_true");
 	ntp_svxseg_reco  = (TTree*) f_reco->Get("ntp_svxseg");
 	ntp_event_reco = (TTree*) f_reco->Get("ntp_event");
 	ntp_svxseg_data  = (TTree*) f_data->Get("ntp_svxseg");
@@ -117,13 +167,12 @@ void readFiles()
 	nevents_reco = ntp_event_reco->GetEntries();
 	nevents_data = ntp_event_data->GetEntries();
 
+	//Extract the spectra from truth AMPT events that fire the BBC trigger
+	getTruthInformation();
+
 	//Extract raw pT distributions for each case
 	for (int i = 0; i < NSECT; i++)
 	{
-		//Spectra
-		ntp_svxseg_true->Draw(Form("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h_DeltaNDeltapT_truth_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), Form("%s && %s && %s", momcut.c_str(), eta1cut.c_str(), sectorCut[i].c_str()), "goff");
-		h_DeltaNDeltapT_truth[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_truth_%s", sectorLabel[i].c_str()));
-
 		ntp_svxseg_reco->Draw(Form("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h_DeltaNDeltapT_reco_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
 		h_DeltaNDeltapT_reco[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_reco_%s", sectorLabel[i].c_str()));
 
@@ -167,7 +216,7 @@ void readFiles()
 	h_eta_regions_reco[2] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_3");
 
 	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_4(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion4cut).c_str(), "goff");
-	h_eta_regions_reco[3] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_4");	
+	h_eta_regions_reco[3] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_4");
 
 	//Set errors on these histograms since they just contain counts
 	for (int i = 0; i < NSECT; i++)
@@ -183,20 +232,20 @@ void readFiles()
 
 void extractAzimuthalDistribution()
 {
-	h_phi_data[0] = new TH1F("h_phi_data_INCLUSIVE","h_phi_data_INCLUSIVE",400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
-	h_phi_data[1] = new TH1F("h_phi_data_ET","h_phi_data_ET",400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
-	h_phi_data[2] = new TH1F("h_phi_data_EB","h_phi_data_EB",400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
-	h_phi_data[3] = new TH1F("h_phi_data_WT","h_phi_data_WT",400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
-	h_phi_data[4] = new TH1F("h_phi_data_WB","h_phi_data_WB",400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_phi_data[0] = new TH1F("h_phi_data_INCLUSIVE", "h_phi_data_INCLUSIVE", 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_phi_data[1] = new TH1F("h_phi_data_ET", "h_phi_data_ET", 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_phi_data[2] = new TH1F("h_phi_data_EB", "h_phi_data_EB", 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_phi_data[3] = new TH1F("h_phi_data_WT", "h_phi_data_WT", 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_phi_data[4] = new TH1F("h_phi_data_WB", "h_phi_data_WB", 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
 
-	h_phi_reco[0] = new TH1F("h_phi_reco_INCLUSIVE","h_phi_reco_INCLUSIVE",400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
-	h_phi_reco[1] = new TH1F("h_phi_reco_ET","h_phi_reco_ET",400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
-	h_phi_reco[2] = new TH1F("h_phi_reco_EB","h_phi_reco_EB",400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
-	h_phi_reco[3] = new TH1F("h_phi_reco_WT","h_phi_reco_WT",400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
-	h_phi_reco[4] = new TH1F("h_phi_reco_WB","h_phi_reco_WB",400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_phi_reco[0] = new TH1F("h_phi_reco_INCLUSIVE", "h_phi_reco_INCLUSIVE", 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_phi_reco[1] = new TH1F("h_phi_reco_ET", "h_phi_reco_ET", 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_phi_reco[2] = new TH1F("h_phi_reco_EB", "h_phi_reco_EB", 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_phi_reco[3] = new TH1F("h_phi_reco_WT", "h_phi_reco_WT", 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_phi_reco[4] = new TH1F("h_phi_reco_WB", "h_phi_reco_WB", 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
 
-	h_eta_phi_sims = new TH2F("h_eta_phi_sims","h_eta_phi_sims;#eta;#phi",200,-1.5,1.5,400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
-	h_eta_phi_data = new TH2F("h_eta_phi_data","h_eta_phi_data;#eta;#phi",200,-1.5,1.5,400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_eta_phi_sims = new TH2F("h_eta_phi_sims", "h_eta_phi_sims;#eta;#phi", 200, -1.5, 1.5, 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+	h_eta_phi_data = new TH2F("h_eta_phi_data", "h_eta_phi_data;#eta;#phi", 200, -1.5, 1.5, 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
 
 	float mom_reco[3];
 	float vtx_reco[3];
@@ -227,9 +276,9 @@ void extractAzimuthalDistribution()
 		ntp_svxseg_reco->GetEntry(i);
 
 		float phi = TMath::ATan2(mom_reco[1], mom_reco[0]);
-		float eta = TMath::ATanH(mom_reco[2]/TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1] + mom_reco[2]*mom_reco[2]));
+		float eta = TMath::ATanH(mom_reco[2] / TMath::Sqrt(mom_reco[0] * mom_reco[0] + mom_reco[1] * mom_reco[1] + mom_reco[2] * mom_reco[2]));
 
-		if ((nhits_reco[0] + nhits_reco[1] + nhits_reco[2] + nhits_reco[3] != 4) || TMath::Abs(vtx_reco[2]) > 1 || TMath::Abs(dca_reco) > 0.15 || TMath::Abs(dca2d_reco) > 0.05 || chisq_reco/ndf_reco > 3 || TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom_reco[2]/TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1] + mom_reco[2]*mom_reco[2]))) > 0.35)
+		if ((nhits_reco[0] + nhits_reco[1] + nhits_reco[2] + nhits_reco[3] != 4) || TMath::Abs(vtx_reco[2]) > 1 || TMath::Abs(dca_reco) > 0.15 || TMath::Abs(dca2d_reco) > 0.05 || chisq_reco / ndf_reco > 3 || TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom_reco[2] / TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1] + mom_reco[2]*mom_reco[2]))) > 0.35)
 		{
 			continue;
 		}
@@ -244,7 +293,7 @@ void extractAzimuthalDistribution()
 		}
 
 		h_phi_reco[0]->Fill(phi);
-		h_eta_phi_sims->Fill(eta,phi);
+		h_eta_phi_sims->Fill(eta, phi);
 	}
 
 	ntp_svxseg_data->SetBranchAddress("mom", &mom_data);
@@ -260,9 +309,9 @@ void extractAzimuthalDistribution()
 		ntp_svxseg_data->GetEntry(i);
 
 		float phi = TMath::ATan2(mom_data[1], mom_data[0]);
-		float eta = TMath::ATanH(mom_data[2]/TMath::Sqrt(mom_data[0]*mom_data[0] + mom_data[1]*mom_data[1] + mom_data[2]*mom_data[2]));
+		float eta = TMath::ATanH(mom_data[2] / TMath::Sqrt(mom_data[0] * mom_data[0] + mom_data[1] * mom_data[1] + mom_data[2] * mom_data[2]));
 
-		if ((nhits_data[0] + nhits_data[1] + nhits_data[2] + nhits_data[3] != 4) || TMath::Abs(vtx_data[2]) > 1 || TMath::Abs(dca_data) > 0.15 || TMath::Abs(dca2d_data) > 0.05 || chisq_data/ndf_data > 3 || TMath::Sqrt(mom_data[0]*mom_data[0] + mom_data[1]*mom_data[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom_data[2]/TMath::Sqrt(mom_data[0]*mom_data[0] + mom_data[1]*mom_data[1] + mom_data[2]*mom_data[2]))) > 0.35)
+		if ((nhits_data[0] + nhits_data[1] + nhits_data[2] + nhits_data[3] != 4) || TMath::Abs(vtx_data[2]) > 1 || TMath::Abs(dca_data) > 0.15 || TMath::Abs(dca2d_data) > 0.05 || chisq_data / ndf_data > 3 || TMath::Sqrt(mom_data[0]*mom_data[0] + mom_data[1]*mom_data[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom_data[2] / TMath::Sqrt(mom_data[0]*mom_data[0] + mom_data[1]*mom_data[1] + mom_data[2]*mom_data[2]))) > 0.35)
 		{
 			continue;
 		}
@@ -277,7 +326,7 @@ void extractAzimuthalDistribution()
 		}
 
 		h_phi_data[0]->Fill(phi);
-		h_eta_phi_data->Fill(eta,phi);
+		h_eta_phi_data->Fill(eta, phi);
 	}
 }
 
@@ -377,7 +426,7 @@ void plot()
 
 void writeToFile()
 {
-	TFile *fout = new TFile("WorkingFiles/normalizedSpectra_1.root", "RECREATE");
+	TFile *fout = new TFile("WorkingFiles/normalizedSpectra_1_test.root", "RECREATE");
 
 	for (int i = 0; i < NSECT; i++)
 	{
@@ -394,8 +443,8 @@ void writeToFile()
 		h_chisqndf_data[i]->Write();
 	}
 
-	for(int i=0; i<4; i++)
-	{	
+	for (int i = 0; i < 4; i++)
+	{
 		h_eta_regions_reco[i]->Write();
 		h_eta_regions_data[i]->Write();
 	}
