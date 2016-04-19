@@ -60,7 +60,7 @@ TGraphErrors *gHadrons;
 
 void readFiles()
 {
-	TFile *fin = new TFile("WorkingFiles/normalizedSpectra_1.root");
+	TFile *fin = new TFile("WorkingFiles/normalizedSpectra_1_test.root");
 
 	for (int i = 0; i < NSECT; i++)
 	{
