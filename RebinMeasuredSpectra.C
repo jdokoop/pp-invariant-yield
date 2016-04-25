@@ -55,6 +55,10 @@ TH1F *h_phi_data[NSECT];
 TH1F *h_chisqndf_reco[NSECT];
 TH1F *h_chisqndf_data[NSECT];
 
+//Pseudorapidity distributions for |zprec| < 1
+TH1F *h_eta_preccut_data;
+TH1F *h_eta_preccut_reco;
+
 //Pseudorapidity distributions for selected azimuthal regions
 TH1F *h_eta_regions_data[4];
 TH1F *h_eta_regions_reco[4];
@@ -63,7 +67,9 @@ TH1F *h_eta_regions_reco[4];
 TH2F *h_eta_phi_data;
 TH2F *h_eta_phi_sims;
 
-string zvtxcut  = "TMath::Abs(vtx[2]) < 10";
+string zvtxpreccut = "TMath::Abs(vtx_prec[2]) < 1";
+string zvtxcut  = "TMath::Abs(vtx_bbc[2]) < 10";
+string zvtxcuttruth = "TMath::Abs(vtx_bbc[2]) < 10";
 string chisqcut = "chisq/ndf < 3";
 string dcacut   = "TMath::Abs(dca) < 0.15";
 string dca2dcut = "TMath::Abs(dca2d) < 0.05";
@@ -73,7 +79,7 @@ string nhitscut = "nhits[0]+nhits[1]+nhits[2]+nhits[3] == 4";
 string eta1cut = "TMath::Abs(eta) < 0.35";
 string eta2cut = "TMath::Abs(TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) < 0.35";
 string etatruthcut = "TMath::Abs(TMath::ATanH(mom_truth[2]/TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1] + mom_truth[2]*mom_truth[2]))) < 0.35";
-string bbccut = "bbcqs + bbcqn > 2.0";
+string bbccut = "bbcqs > 0 && bbcqn > 0";
 
 //Sector cuts
 string inclusivephi = "TMath::ATan2(mom[1],mom[0]) < TMath::Pi()";
@@ -116,12 +122,12 @@ TFile *f_data;
 void getTruthInformation()
 {
 	//The truth information is contained in the npt_svxseg_ampt tree
-	//Select only tracks for events with BBCS + BBCN > 2
+	//Select only tracks for events with BBCS + BBCN > 2 and bbcz_vtx < 1 cm
 	ntp_svxseg_true = (TTree*) f_reco->Get("ntp_svxseg_ampt");
 
 	for (int i = 0; i < NSECT; i++)
 	{
-		ntp_svxseg_true->Draw(Form("TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1])>>h_DeltaNDeltapT_truth_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), Form("%s && %s && %s && %s", momtruthcut.c_str(), etatruthcut.c_str(), sectorCutTruth[i].c_str(), bbccut.c_str()), "goff");
+		ntp_svxseg_true->Draw(Form("TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1])>>h_DeltaNDeltapT_truth_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), Form("%s && %s && %s && %s && %s", momtruthcut.c_str(), etatruthcut.c_str(), sectorCutTruth[i].c_str(), bbccut.c_str(), zvtxcuttruth.c_str()), "goff");
 		h_DeltaNDeltapT_truth[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_truth_%s", sectorLabel[i].c_str()));
 	}
 
@@ -129,14 +135,16 @@ void getTruthInformation()
 	int eventno;
 	float bbcqs;
 	float bbcqn;
+	float vtx_bbc_truth[3];
 	int lastEvent = -1;
 	ntp_svxseg_true->SetBranchAddress("eventno", &eventno);
 	ntp_svxseg_true->SetBranchAddress("bbcqn", &bbcqn);
 	ntp_svxseg_true->SetBranchAddress("bbcqs", &bbcqs);
-cout << "Starting Truth Processing" << endl;
+	ntp_svxseg_true->SetBranchAddress("vtx_bbc", &vtx_bbc_truth);
+	cout << "Starting Truth Processing" << endl;
 	for (int i = 0; i < ntp_svxseg_true->GetEntries(); i++)
 	{
-		if(i%1000 == 0) cout << "Track " << i << endl;
+		if (i % 1000 == 0) cout << "Track " << i << endl;
 		ntp_svxseg_true->GetEntry(i);
 		if (bbcqs + bbcqn >= 2.0)
 		{
@@ -154,8 +162,8 @@ cout << "Starting Truth Processing" << endl;
 void readFiles()
 {
 	//Read in files
-	f_reco    = new TFile("Data/423844_ana_newmat_1.root");
-	f_data  = new TFile("Data/423844_data_1_1_1.root");
+	f_reco    = new TFile("Data/423844_reco_1_0_1_0.root");
+	f_data  = new TFile("Data/423844_data_0_1.root");
 
 	//Extract relevant NTuples
 	ntp_svxseg_reco  = (TTree*) f_reco->Get("ntp_svxseg");
@@ -164,8 +172,8 @@ void readFiles()
 	ntp_event_data   = (TTree*) f_data->Get("ntp_event");
 
 	//Get number of events from NTuples for each case
-	nevents_reco = ntp_event_reco->GetEntries();
-	nevents_data = ntp_event_data->GetEntries();
+	nevents_reco = ntp_event_reco->GetEntries("bbcqn > 0 && bbcqs > 0");
+	nevents_data = ntp_event_data->GetEntries(zvtxcuttruth.c_str());
 
 	//Extract the spectra from truth AMPT events that fire the BBC trigger
 	getTruthInformation();
@@ -173,21 +181,14 @@ void readFiles()
 	//Extract raw pT distributions for each case
 	for (int i = 0; i < NSECT; i++)
 	{
-		ntp_svxseg_reco->Draw(Form("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h_DeltaNDeltapT_reco_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
+		ntp_svxseg_reco->Draw(Form("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h_DeltaNDeltapT_reco_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + bbccut + "&&" + sectorCut[i]).c_str(), "goff");
 		h_DeltaNDeltapT_reco[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_reco_%s", sectorLabel[i].c_str()));
 
 		ntp_svxseg_data->Draw(Form("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h_DeltaNDeltapT_data_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
 		h_DeltaNDeltapT_data[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_data_%s", sectorLabel[i].c_str()));
 
-		//Azimuthal angle distributions
-		//ntp_svxseg_reco->Draw(Form("TMath::ATan2(mom[1],mom[0])>>h_phi_reco_%s(200,-3.5,3.5)", sectorLabel[i].c_str()), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
-		//h_phi_reco[i] = (TH1F*) gDirectory->FindObject(Form("h_phi_reco_%s", sectorLabel[i].c_str()));
-
-		//ntp_svxseg_data->Draw(Form("TMath::ATan2(mom[1],mom[0])>>h_phi_data_%s(200,-3.5,3.5)", sectorLabel[i].c_str()), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
-		//h_phi_data[i] = (TH1F*) gDirectory->FindObject(Form("h_phi_data_%s", sectorLabel[i].c_str()));
-
 		//Chi square distributions
-		ntp_svxseg_reco->Draw(Form("chisq/ndf>>h_chisqndf_reco_%s(100,0,10)", sectorLabel[i].c_str()), (eta2cut + "&&" + zvtxcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
+		ntp_svxseg_reco->Draw(Form("chisq/ndf>>h_chisqndf_reco_%s(100,0,10)", sectorLabel[i].c_str()), (eta2cut + "&&" + zvtxcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i] + "&&" + bbccut).c_str(), "goff");
 		h_chisqndf_reco[i] = (TH1F*) gDirectory->FindObject(Form("h_chisqndf_reco_%s", sectorLabel[i].c_str()));
 
 		ntp_svxseg_data->Draw(Form("chisq/ndf>>h_chisqndf_data_%s(100,0,10)", sectorLabel[i].c_str()), (eta2cut + "&&" + zvtxcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
@@ -206,17 +207,23 @@ void readFiles()
 	ntp_svxseg_data->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_data_4(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion4cut).c_str(), "goff");
 	h_eta_regions_data[3] = (TH1F*) gDirectory->FindObject("h_eta_regions_data_4");
 
-	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_1(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion1cut).c_str(), "goff");
+	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_1(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion1cut + "&&" + bbccut).c_str(), "goff");
 	h_eta_regions_reco[0] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_1");
 
-	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_2(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion2cut).c_str(), "goff");
+	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_2(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion2cut + "&&" + bbccut).c_str(), "goff");
 	h_eta_regions_reco[1] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_2");
 
-	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_3(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion3cut).c_str(), "goff");
+	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_3(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion3cut + "&&" + bbccut).c_str(), "goff");
 	h_eta_regions_reco[2] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_3");
 
-	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_4(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion4cut).c_str(), "goff");
+	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_regions_reco_4(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + phiregion4cut + "&&" + bbccut).c_str(), "goff");
 	h_eta_regions_reco[3] = (TH1F*) gDirectory->FindObject("h_eta_regions_reco_4");
+
+	ntp_svxseg_reco->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_preccut_reco(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + bbccut).c_str(), "goff");
+	h_eta_preccut_reco = (TH1F*) gDirectory->FindObject("h_eta_preccut_reco");
+
+	ntp_svxseg_data->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>h_eta_preccut_data(200,-1.5,1.5)", (zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + bbccut).c_str(), "goff");
+	h_eta_preccut_data = (TH1F*) gDirectory->FindObject("h_eta_preccut_data");
 
 	//Set errors on these histograms since they just contain counts
 	for (int i = 0; i < NSECT; i++)
@@ -254,6 +261,8 @@ void extractAzimuthalDistribution()
 	float ndf_reco;
 	float dca_reco;
 	float dca2d_reco;
+	float bbcqn_reco;
+	float bbcqs_reco;
 
 	float mom_data[3];
 	float vtx_data[3];
@@ -264,12 +273,14 @@ void extractAzimuthalDistribution()
 	float dca2d_data;
 
 	ntp_svxseg_reco->SetBranchAddress("mom", &mom_reco);
-	ntp_svxseg_reco->SetBranchAddress("vtx", &vtx_reco);
+	ntp_svxseg_reco->SetBranchAddress("vtx_bbc", &vtx_reco);
 	ntp_svxseg_reco->SetBranchAddress("nhits", &nhits_reco);
 	ntp_svxseg_reco->SetBranchAddress("chisq", &chisq_reco);
 	ntp_svxseg_reco->SetBranchAddress("ndf", &ndf_reco);
 	ntp_svxseg_reco->SetBranchAddress("dca", &dca_reco);
 	ntp_svxseg_reco->SetBranchAddress("dca2d", &dca2d_reco);
+	ntp_svxseg_reco->SetBranchAddress("bbcqs", &bbcqs_reco);
+	ntp_svxseg_reco->SetBranchAddress("bbcqn", &bbcqn_reco);
 
 	for (int i = 0; i < ntp_svxseg_reco->GetEntries(); i++)
 	{
@@ -278,7 +289,7 @@ void extractAzimuthalDistribution()
 		float phi = TMath::ATan2(mom_reco[1], mom_reco[0]);
 		float eta = TMath::ATanH(mom_reco[2] / TMath::Sqrt(mom_reco[0] * mom_reco[0] + mom_reco[1] * mom_reco[1] + mom_reco[2] * mom_reco[2]));
 
-		if ((nhits_reco[0] + nhits_reco[1] + nhits_reco[2] + nhits_reco[3] != 4) || TMath::Abs(vtx_reco[2]) > 1 || TMath::Abs(dca_reco) > 0.15 || TMath::Abs(dca2d_reco) > 0.05 || chisq_reco / ndf_reco > 3 || TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom_reco[2] / TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1] + mom_reco[2]*mom_reco[2]))) > 0.35)
+		if ((nhits_reco[0] + nhits_reco[1] + nhits_reco[2] + nhits_reco[3] != 4) || TMath::Abs(vtx_reco[2]) > 10 || TMath::Abs(dca_reco) > 0.15 || TMath::Abs(dca2d_reco) > 0.05 || chisq_reco / ndf_reco > 3 || TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom_reco[2] / TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1] + mom_reco[2]*mom_reco[2]))) > 0.35 || bbcqn_reco == 0 || bbcqs_reco == 0)
 		{
 			continue;
 		}
@@ -297,7 +308,7 @@ void extractAzimuthalDistribution()
 	}
 
 	ntp_svxseg_data->SetBranchAddress("mom", &mom_data);
-	ntp_svxseg_data->SetBranchAddress("vtx", &vtx_data);
+	ntp_svxseg_data->SetBranchAddress("vtx_bbc", &vtx_data);
 	ntp_svxseg_data->SetBranchAddress("nhits", &nhits_data);
 	ntp_svxseg_data->SetBranchAddress("chisq", &chisq_data);
 	ntp_svxseg_data->SetBranchAddress("ndf", &ndf_data);
@@ -426,7 +437,7 @@ void plot()
 
 void writeToFile()
 {
-	TFile *fout = new TFile("WorkingFiles/normalizedSpectra_1_test.root", "RECREATE");
+	TFile *fout = new TFile("WorkingFiles/normSpectra_1_0_1_0_v_0_1.root", "RECREATE");
 
 	for (int i = 0; i < NSECT; i++)
 	{
@@ -451,6 +462,9 @@ void writeToFile()
 
 	h_eta_phi_sims->Write();
 	h_eta_phi_data->Write();
+
+	h_eta_preccut_reco->Write();
+	h_eta_preccut_data->Write();
 }
 
 void RebinMeasuredSpectra()
