@@ -30,6 +30,10 @@ TH2F *h_eta_phi_reco;
 TH1F *h_eta_regions_data[4];
 TH1F *h_eta_regions_reco[4];
 
+//Pseudorapidity distributions for |zprec| < 1
+TH1F *h_eta_preccut_data;
+TH1F *h_eta_preccut_reco;
+
 //Chisd distributions
 TH1F *h_chisqndf_data[NSECT];
 
@@ -48,11 +52,16 @@ int offsetX[NSECT] = {1, 4, 0, 2, 3};
 //Tsallis fits to spectra in each sector
 TF1 *tsallisSectorFit[5];
 
+//Tsallis fit to PPG030 spectrum
+TF1 *tsallisPublishedFit;
+
 //Ratio of Tsallis fits to spectrum in each sector
 TGraphErrors *tsallisSectorRatio[5];
 
 //Published charged hadron yield from PPG030
 TGraphErrors *gHadrons;
+
+TGraphErrors *gHadronsRatio;
 
 //---------------------------------------
 // Functions
@@ -60,7 +69,7 @@ TGraphErrors *gHadrons;
 
 void readFiles()
 {
-	TFile *fin = new TFile("WorkingFiles/normalizedSpectra_1_test.root");
+	TFile *fin = new TFile("WorkingFiles/normSpectra_1_0_1_0_v_0_1.root");
 
 	for (int i = 0; i < NSECT; i++)
 	{
@@ -76,22 +85,28 @@ void readFiles()
 	h_eta_phi_data = (TH2F*) fin->Get("h_eta_phi_data");
 	h_eta_phi_reco = (TH2F*) fin->Get("h_eta_phi_sims");
 
-	h_eta_phi_data->Scale(1.0/h_eta_phi_data->Integral());
-	h_eta_phi_reco->Scale(1.0/h_eta_phi_reco->Integral());
+	h_eta_phi_data->Scale(1.0 / h_eta_phi_data->Integral());
+	h_eta_phi_reco->Scale(1.0 / h_eta_phi_reco->Integral());
 
 	h_phi_data[0] = (TH1F*) h_eta_phi_data->ProjectionY("h_phi_data_inclusive");
 	h_phi_reco[0] = (TH1F*) h_eta_phi_reco->ProjectionY("h_phi_reco_inclusive");
 
-	//Create 1D eta histograms from 2D eta v. phi
-	h_eta_regions_data[0] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi1",h_eta_phi_data->GetYaxis()->FindBin(2.4),h_eta_phi_data->GetYaxis()->FindBin(3.1));
-	h_eta_regions_data[1] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi2",h_eta_phi_data->GetYaxis()->FindBin(-0.2),h_eta_phi_data->GetYaxis()->FindBin(0.2));
-	h_eta_regions_data[2] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi3",h_eta_phi_data->GetYaxis()->FindBin(0.65),h_eta_phi_data->GetYaxis()->FindBin(0.85));
-	h_eta_regions_data[3] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi4",h_eta_phi_data->GetYaxis()->FindBin(-0.75),h_eta_phi_data->GetYaxis()->FindBin(-0.6));
+	h_eta_preccut_reco = (TH1F*) fin->Get("h_eta_preccut_reco");
+	h_eta_preccut_data = (TH1F*) fin->Get("h_eta_preccut_data");
 
-	h_eta_regions_reco[0] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi1",h_eta_phi_reco->GetYaxis()->FindBin(2.4),h_eta_phi_reco->GetYaxis()->FindBin(3.1));
-	h_eta_regions_reco[1] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi2",h_eta_phi_reco->GetYaxis()->FindBin(-0.2),h_eta_phi_reco->GetYaxis()->FindBin(0.2));
-	h_eta_regions_reco[2] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi3",h_eta_phi_reco->GetYaxis()->FindBin(0.65),h_eta_phi_reco->GetYaxis()->FindBin(0.85));
-	h_eta_regions_reco[3] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi4",h_eta_phi_reco->GetYaxis()->FindBin(-0.75),h_eta_phi_reco->GetYaxis()->FindBin(-0.6));
+	h_eta_preccut_reco->Scale(1.0/h_eta_preccut_reco->Integral());
+	h_eta_preccut_data->Scale(1.0/h_eta_preccut_data->Integral());
+
+	//Create 1D eta histograms from 2D eta v. phi
+	h_eta_regions_data[0] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi1", h_eta_phi_data->GetYaxis()->FindBin(2.4), h_eta_phi_data->GetYaxis()->FindBin(3.1));
+	h_eta_regions_data[1] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi2", h_eta_phi_data->GetYaxis()->FindBin(-0.2), h_eta_phi_data->GetYaxis()->FindBin(0.2));
+	h_eta_regions_data[2] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi3", h_eta_phi_data->GetYaxis()->FindBin(0.65), h_eta_phi_data->GetYaxis()->FindBin(0.85));
+	h_eta_regions_data[3] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi4", h_eta_phi_data->GetYaxis()->FindBin(-0.75), h_eta_phi_data->GetYaxis()->FindBin(-0.6));
+
+	h_eta_regions_reco[0] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi1", h_eta_phi_reco->GetYaxis()->FindBin(2.4), h_eta_phi_reco->GetYaxis()->FindBin(3.1));
+	h_eta_regions_reco[1] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi2", h_eta_phi_reco->GetYaxis()->FindBin(-0.2), h_eta_phi_reco->GetYaxis()->FindBin(0.2));
+	h_eta_regions_reco[2] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi3", h_eta_phi_reco->GetYaxis()->FindBin(0.65), h_eta_phi_reco->GetYaxis()->FindBin(0.85));
+	h_eta_regions_reco[3] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi4", h_eta_phi_reco->GetYaxis()->FindBin(-0.75), h_eta_phi_reco->GetYaxis()->FindBin(-0.6));
 
 
 	//Get hadron spectrum from PPG030
@@ -132,13 +147,14 @@ void fitSpectrum()
 	//Fit spectra with Tsallis form
 	float m = 0.15;
 	TF1 *tsallisFit = new TF1("tsallisFit", "[0]*(([1]-1)*([1]-1))/(([1]*[2] + 0.140*([1] - 1))*([1]*[2] + 0.140)) * pow(([1]*[2] + TMath::Sqrt(0.140*0.140 + x*x))/([1]*[2]+0.140),-1*[1])", 0.3, 1.9);
-	//tsallisFit->SetParameter(0, 1.28);
-	//tsallisFit->SetParameter(1, 9.67);
-	//tsallisFit->SetParameter(2, 121.077);
 
-	tsallisFit->SetParameter(0, 0.78);
-	tsallisFit->SetParameter(1, 38.79);
-	tsallisFit->SetParameter(2, 0.145);
+	//tsallisFit->SetParameter(0, 2.61119e-01);
+	//tsallisFit->SetParameter(1, 2.09755e+01);
+	//tsallisFit->SetParameter(2, 1.68027e-01);
+
+	tsallisFit->SetParameter(0, 0.24);
+	tsallisFit->SetParameter(1, 17.62);
+	tsallisFit->SetParameter(2, 0.18576);
 
 	for (int i = 0; i < NSECT; i++)
 	{
@@ -146,10 +162,25 @@ void fitSpectrum()
 		tsallisSectorFit[i] = (TF1*) h_dNdpT_data[i]->GetFunction("tsallisFit");
 		tsallisSectorFit[i]->SetLineColor(yieldColor[i]);
 	}
+
+	TF1 *tsallisFit2 = new TF1("tsallisFit2", "[0]*(([1]-1)*([1]-1))/(([1]*[2] + 0.140*([1] - 1))*([1]*[2] + 0.140)) * pow(([1]*[2] + TMath::Sqrt(0.140*0.140 + x*x))/([1]*[2]+0.140),-1*[1])", 0.3, 1.9);
+
+	//tsallisFit2->SetParameter(0, 0.26);
+	//tsallisFit2->SetParameter(1, 15.65);
+	//tsallisFit2->SetParameter(2, 0.17);
+
+	tsallisFit2->SetParameter(0, 0.25);
+	tsallisFit2->SetParameter(1, 15.02);
+	tsallisFit2->SetParameter(2, 0.17);
+
+	//gHadrons->Fit("tsallisFit2", "0R");
+	//tsallisPublishedFit = (TF1*) gHadrons->GetFunction("tsallisFit2");
+	tsallisPublishedFit = (TF1*) tsallisFit2->Clone("tsallisPublishedFit");
 }
 
 void divideFits()
 {
+	//Divide yield in each sector to the inclusive fit
 	double x[9];
 	double y[9];
 	double ex[9] = {0};
@@ -163,7 +194,7 @@ void divideFits()
 		{
 			x[i] = h_dNdpT_data[j]->GetBinCenter(i + 1) + offsetX[j] * epsilon;
 
-			y[i] = h_dNdpT_data[j]->GetBinContent(i + 1) / tsallisSectorFit[0]->Eval(x[i]);
+			y[i] = (h_dNdpT_data[j]->GetBinContent(i + 1) / tsallisSectorFit[0]->Eval(x[i])) / 1.09;
 			ey[i] = h_dNdpT_data[j]->GetBinError(i + 1) / tsallisSectorFit[0]->Eval(x[i]);
 		}
 
@@ -171,6 +202,22 @@ void divideFits()
 		tsallisSectorRatio[j]->SetLineColor(yieldColor[j]);
 		tsallisSectorRatio[j]->SetMarkerColor(yieldColor[j]);
 		tsallisSectorRatio[j]->SetMarkerStyle(20);
+	}
+
+	//Divide published spectrum by inclusive fit
+	gHadronsRatio = (TGraphErrors*) gHadrons->Clone();
+
+	for (int i = 0; i < gHadronsRatio->GetN(); i++)
+	{
+		Double_t x_val;
+		Double_t y_val;
+		Double_t ratio;
+
+		gHadronsRatio->GetPoint(i, x_val, y_val);
+
+		ratio = (y_val / tsallisPublishedFit->Eval(x_val));
+
+		gHadronsRatio->SetPoint(i, x_val, ratio);
 	}
 }
 
@@ -220,7 +267,7 @@ void plotInvariantYield()
 	c1->Divide(1, 2, 0, 0);
 
 	c1->cd(1);
-	gPad->SetPad(.005, .3, .9, .92 );
+	gPad->SetPad(.005, .3, .9, .95 );
 	gPad->SetLogy();
 	gPad->SetTickx();
 	gPad->SetTicky();
@@ -256,13 +303,9 @@ void plotInvariantYield()
 	g_dNdpT_data[4]->Draw("P,same");
 
 	tsallisSectorFit[0]->Draw("same");
-	//tsallisSectorFit[1]->Draw("same");
-	//tsallisSectorFit[2]->Draw("same");
-	//tsallisSectorFit[3]->Draw("same");
-	//tsallisSectorFit[4]->Draw("same");
 
 	c1->cd(2);
-	gPad->SetPad(.005, .005, .9, .3);
+	gPad->SetPad(.005, .008, .9, .3);
 	gPad->SetTickx();
 	gPad->SetTicky();
 
@@ -271,16 +314,18 @@ void plotInvariantYield()
 	tsallisSectorRatio[0]->GetXaxis()->SetLabelFont(62);
 	tsallisSectorRatio[0]->GetXaxis()->SetTitleFont(62);
 	tsallisSectorRatio[0]->GetXaxis()->SetLabelSize(62);
-	tsallisSectorRatio[0]->GetXaxis()->SetLabelSize(0.04);
-	tsallisSectorRatio[0]->GetXaxis()->SetTitleSize(0.04);
+	tsallisSectorRatio[0]->GetXaxis()->SetLabelSize(0.07);
+	tsallisSectorRatio[0]->GetXaxis()->SetTitleSize(0.07);
 	tsallisSectorRatio[0]->GetXaxis()->SetTitle("p_{T} [GeV/c]");
 
 	tsallisSectorRatio[0]->GetYaxis()->SetRangeUser(0.0, 2.44);
 	tsallisSectorRatio[0]->GetYaxis()->SetLabelFont(62);
 	tsallisSectorRatio[0]->GetYaxis()->SetTitleFont(62);
 	tsallisSectorRatio[0]->GetYaxis()->SetLabelSize(62);
-	tsallisSectorRatio[0]->GetYaxis()->SetLabelSize(0.04);
-	tsallisSectorRatio[0]->GetYaxis()->SetTitleSize(0.04);
+	tsallisSectorRatio[0]->GetYaxis()->SetLabelSize(0.07);
+	tsallisSectorRatio[0]->GetYaxis()->SetTitleSize(0.07);
+	tsallisSectorRatio[0]->GetYaxis()->SetRangeUser(0.7, 1.4);
+	tsallisSectorRatio[0]->GetYaxis()->SetTitleOffset(0.7);
 	tsallisSectorRatio[0]->GetYaxis()->SetTitle("Points / Inclusive Fit");
 
 	tsallisSectorRatio[0]->SetLineWidth(2);
@@ -299,29 +344,26 @@ void plotInvariantYield()
 	tlUnity->SetLineStyle(7);
 	tlUnity->Draw("same");
 
-	TCanvas *c2 = new TCanvas("c2", "Invariant Yield for all Sectors", 600, 600);
-	c2->SetLogy();
-
-	g_dNdpT_data[0]->Draw("AP");
-	g_dNdpT_data[1]->Draw("P,same");
-	g_dNdpT_data[2]->Draw("P,same");
-	g_dNdpT_data[3]->Draw("P,same");
-	g_dNdpT_data[4]->Draw("P,same");
-
-	tsallisSectorFit[0]->Draw("same");
-	tsallisSectorFit[1]->Draw("same");
-	tsallisSectorFit[2]->Draw("same");
-	tsallisSectorFit[3]->Draw("same");
-	tsallisSectorFit[4]->Draw("same");
-
-	gHadrons->Draw("P,same");
-
 	TCanvas *c3 = new TCanvas("c3", "Invariant Yield for Inclusive Azimuth", 600, 600);
-	c3->SetLogy();
+	c3->Divide(1, 2, 0, 0);
+
+	c3->cd(1);
+	gPad->SetLogy();
+	gPad->SetPad(.005, .3, .9, .92 );
 	g_dNdpT_data[0]->Draw("AP");
 	gHadrons->SetMarkerStyle(28);
 	gHadrons->SetMarkerColor(kViolet);
 	gHadrons->Draw("P,same");
+	tsallisPublishedFit->Draw("same");
+	tsallisPublishedFit->SetLineWidth(1);
+
+	c3->cd(2);
+	gPad->SetPad(.005, .005, .9, .3);
+	tsallisSectorRatio[0]->Draw("AP,same");
+	gHadronsRatio->SetMarkerStyle(28);
+	gHadronsRatio->SetMarkerColor(kMagenta);
+	gHadronsRatio->Draw("P,same");
+	tlUnity->Draw("same");
 }
 
 void convertCorrectionToGraph()
@@ -395,7 +437,8 @@ void plotEfficiencyCorrection()
 	g_correction[0]->GetYaxis()->SetLabelSize(62);
 	g_correction[0]->GetYaxis()->SetLabelSize(0.04);
 	g_correction[0]->GetYaxis()->SetTitleSize(0.04);
-	g_correction[0]->GetYaxis()->SetTitle("#varepsilon_{acc}");
+	g_correction[0]->GetYaxis()->SetTitle("Eff #times Acc");
+	g_correction[0]->GetYaxis()->SetRangeUser(0, 0.5);
 
 	g_correction[0]->Draw("AP");
 	g_correction[1]->Draw("P,same");
@@ -413,9 +456,9 @@ void plotPhi()
 	tlcB0[2] = new TLine(0.00, 0, 0.00, 0.015);
 
 	TBox *tbB0[3];
-	tbB0[0] = new TBox(2.21-0.57/2, 0.015, 2.21+0.57/2, 0.015);
-	tbB0[1] = new TBox(0.47-0.57/2, 0.015, 0.47+0.57/2, 0.015);
-	tbB0[2] = new TBox(0.0-0.57/2, 0.015, 0.0+0.57/2, 0.015);
+	tbB0[0] = new TBox(2.21 - 0.57 / 2, 0.015, 2.21 + 0.57 / 2, 0.015);
+	tbB0[1] = new TBox(0.47 - 0.57 / 2, 0.015, 0.47 + 0.57 / 2, 0.015);
+	tbB0[2] = new TBox(0.0 - 0.57 / 2, 0.015, 0.0 + 0.57 / 2, 0.015);
 
 	TLine *tlcB1[8];
 	tlcB1[0] = new TLine(2.78, 0, 2.78, 0.015);
@@ -426,9 +469,9 @@ void plotPhi()
 	tlcB1[5] = new TLine(3.26, 0, 3.26, 0.015);
 	tlcB1[6] = new TLine(3.50, 0, 3.50, 0.015);
 	tlcB1[7] = new TLine(3.73, 0, 3.73, 0.015);
-	
+
 	TCanvas *cPhiInclusive = new TCanvas("cPhiInclusive", "cPhiInclusive", 600, 600);
-	
+
 	h_phi_data[0]->GetXaxis()->SetLabelFont(62);
 	h_phi_data[0]->GetXaxis()->SetTitleFont(62);
 	h_phi_data[0]->GetXaxis()->SetLabelSize(62);
@@ -444,8 +487,8 @@ void plotPhi()
 	h_phi_data[0]->GetYaxis()->SetTitleSize(0.04);
 	h_phi_data[0]->GetYaxis()->SetTitle("A.U.");
 
-	h_phi_data[0]->Scale(1.0/h_phi_data[0]->Integral());
-	h_phi_reco[0]->Scale(1.0/h_phi_reco[0]->Integral());
+	h_phi_data[0]->Scale(1.0 / h_phi_data[0]->Integral());
+	h_phi_reco[0]->Scale(1.0 / h_phi_reco[0]->Integral());
 
 	h_phi_data[0]->SetTitle("");
 	h_phi_data[0]->Draw();
@@ -462,17 +505,17 @@ void plotPhi()
 	tlcB0[2]->Draw("same");
 
 	//tbB0[0]->SetFillStyle(0);
-    //tbB0[0]->SetLineColor(2);
-    //tbB0[0]->SetLineWidth(2);
+	//tbB0[0]->SetLineColor(2);
+	//tbB0[0]->SetLineWidth(2);
 
 	//tbB0[0]->Draw("same");
 	//tbB0[1]->Draw("l,same");
 	//tbB0[2]->Draw("l,same");
 
-	for(int i=0; i<8; i++)
+	for (int i = 0; i < 8; i++)
 	{
 		tlcB1[i]->SetLineWidth(4);
-		tlcB1[i]->SetLineColor(kGreen+3);
+		tlcB1[i]->SetLineColor(kGreen + 3);
 		tlcB1[i]->Draw("same");
 	}
 }
@@ -519,6 +562,42 @@ void plotChisq()
 	tlChisq->Draw("same");
 }
 
+void plotEtaPreciseVtxCut()
+{
+	TCanvas *cEtaPrec = new TCanvas("cEtaPrec", "Eta for |zprec| < 1 cm", 600, 600);
+	h_eta_preccut_data->Rebin(2);
+	h_eta_preccut_reco->Rebin(2);
+	h_eta_preccut_data->SetLineWidth(2);
+	h_eta_preccut_reco->SetLineWidth(2);
+	h_eta_preccut_data->SetTitle("");
+	h_eta_preccut_data->GetXaxis()->SetLabelFont(62);
+	h_eta_preccut_data->GetXaxis()->SetTitleFont(62);
+	h_eta_preccut_data->GetXaxis()->SetLabelSize(62);
+	h_eta_preccut_data->GetXaxis()->SetLabelSize(0.04);
+	h_eta_preccut_data->GetXaxis()->SetTitleSize(0.04);
+	h_eta_preccut_data->GetXaxis()->SetTitle("#eta");
+
+	h_eta_preccut_data->GetYaxis()->SetLabelFont(62);
+	h_eta_preccut_data->GetYaxis()->SetTitleFont(62);
+	h_eta_preccut_data->GetYaxis()->SetLabelSize(62);
+	h_eta_preccut_data->GetYaxis()->SetLabelSize(0.04);
+	h_eta_preccut_data->GetYaxis()->SetTitleSize(0.04);
+	h_eta_preccut_data->GetYaxis()->SetTitle("A.U.");
+
+	h_eta_preccut_reco->SetLineColor(kBlue);
+	h_eta_preccut_data->SetLineColor(kRed);
+
+	h_eta_preccut_data->Draw();
+	h_eta_preccut_reco->Draw("same");
+
+	TLatex *tl1 = new TLatex(0.4, 0.2, "Unit Integral.");
+	tl1->SetNDC(kTRUE);
+	tl1->Draw("same");
+	TLatex *tl2 = new TLatex(0.4, 0.15, "|z_{prec}| < 1 cm");
+	tl2->SetNDC(kTRUE);
+	tl2->Draw("same");
+}
+
 void plotEta()
 {
 	TCanvas *cEta = new TCanvas("cEta", "Eta for Each Sector", 800, 800);
@@ -559,10 +638,10 @@ void plotEta()
 		float areaData = h_eta_regions_data[i]->Integral(h_eta_regions_data[i]->FindBin(-0.4), h_eta_regions_data[i]->FindBin(0.4));
 		float areaReco = h_eta_regions_reco[i]->Integral(h_eta_regions_reco[i]->FindBin(-0.4), h_eta_regions_reco[i]->FindBin(0.4));
 
-		cout << areaReco/areaData << endl;
+		cout << areaReco / areaData << endl;
 
-		h_eta_regions_data[i]->GetYaxis()->SetRangeUser(0,0.11);
-		h_eta_regions_reco[i]->GetYaxis()->SetRangeUser(0,0.11);
+		h_eta_regions_data[i]->GetYaxis()->SetRangeUser(0, 0.11);
+		h_eta_regions_reco[i]->GetYaxis()->SetRangeUser(0, 0.11);
 
 		h_eta_regions_data[i]->GetXaxis()->SetRangeUser(-0.4, 0.4);
 		h_eta_regions_reco[i]->GetXaxis()->SetRangeUser(-0.4, 0.4);
@@ -596,8 +675,9 @@ void ComputeInvariantYield()
 	plotEfficiencyCorrection();
 
 	//Plot other track variables
-	plotPhi();
-	plotChisq();
-	plotEta();
-	
+	//plotPhi();
+	//plotChisq();
+	//plotEta();
+	plotEtaPreciseVtxCut();
+
 }
