@@ -17,9 +17,6 @@ using namespace std;
 //Number of original pT bins
 const int NBINS = 9;
 
-//Number of bins in rebinned spectra
-const int NBINS_RB = 12;
-
 //Number of sectors
 // --> Inclusive phi, ET, EB, WT, WB
 const int NSECT = 5;
@@ -33,11 +30,6 @@ int nevents_data  = 0;
 TH1F *h_DeltaNDeltapT_truth[NSECT];
 TH1F *h_DeltaNDeltapT_reco[NSECT];
 TH1F *h_DeltaNDeltapT_data[NSECT];
-
-//Rebinned raw pT yield
-TH1F *h_DeltaNDeltapT_truth_rebinned[NSECT];
-TH1F *h_DeltaNDeltapT_reco_rebinned[NSECT];
-TH1F *h_DeltaNDeltapT_data_rebinned[NSECT];
 
 //Invariant yield
 TH1F *h_dNdpT_truth[NSECT];
@@ -67,35 +59,41 @@ TH1F *h_eta_regions_reco[4];
 TH2F *h_eta_phi_data;
 TH2F *h_eta_phi_sims;
 
-string zvtxpreccut = "TMath::Abs(vtx_prec[2]) < 1";
-string zvtxcut  = "TMath::Abs(vtx_bbc[2]) < 10";
+//General track cuts
+string zvtxpreccut  = "TMath::Abs(vtx_prec[2]) < 1";
+string zvtxcut      = "TMath::Abs(vtx_bbc[2]) < 10";
 string zvtxcuttruth = "TMath::Abs(vtx_bbc[2]) < 10";
-string chisqcut = "chisq/ndf < 3";
-string dcacut   = "TMath::Abs(dca) < 0.15";
-string dca2dcut = "TMath::Abs(dca2d) < 0.05";
-string momcut   = "TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 0.2";
-string momtruthcut   = "TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1]) > 0.2";
-string nhitscut = "nhits[0]+nhits[1]+nhits[2]+nhits[3] == 4";
-string eta1cut = "TMath::Abs(eta) < 0.35";
-string eta2cut = "TMath::Abs(TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) < 0.35";
-string etatruthcut = "TMath::Abs(TMath::ATanH(mom_truth[2]/TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1] + mom_truth[2]*mom_truth[2]))) < 0.35";
-string bbccut = "bbcqs > 0 && bbcqn > 0";
+string chisqcut     = "chisq/ndf < 3";
+string dcacut       = "TMath::Abs(dca) < 0.15";
+string dca2dcut     = "TMath::Abs(dca2d) < 0.05";
+//string momcut       = "TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 0.2";
+//string momtruthcut  = "TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1]) > 0.2";
+string momcut       = "TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 0";
+string momtruthcut  = "TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1]) > 0";
+string nhitscut     = "nhits[0]+nhits[1]+nhits[2]+nhits[3] == 4";
+string eta1cut      = "TMath::Abs(eta) < 0.35";
+string eta2cut      = "TMath::Abs(TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) < 0.35";
+string etatruthcut  = "TMath::Abs(TMath::ATanH(mom_truth[2]/TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1] + mom_truth[2]*mom_truth[2]))) < 0.35";
+string bbccut       = "bbcqs > 0 && bbcqn > 0";
+
+//Track cut to remove anomaly in ET (2 < phi(wrapped around = not wrapped around) < 2.5)
+string anomalycutet = "TMath::ATan2(mom[1],mom[0]) < 2 && TMath::ATan2(mom[1],mom[0]) > 2.25";
 
 //Sector cuts
 string inclusivephi = "TMath::ATan2(mom[1],mom[0]) < TMath::Pi()";
-string ebcut    = "TMath::ATan2(mom[1],mom[0]) < -1*TMath::Pi()/2";
-string etcut    = "TMath::ATan2(mom[1],mom[0]) > TMath::Pi()/2";
-string wtcut    = "TMath::ATan2(mom[1],mom[0]) > 0 && TMath::ATan2(mom[1],mom[0]) < TMath::Pi()/2";
-string wbcut    = "TMath::ATan2(mom[1],mom[0]) < 0 && TMath::ATan2(mom[1],mom[0]) > -1*TMath::Pi()/2";
+string ebcut        = "TMath::ATan2(mom[1],mom[0]) < -1*TMath::Pi()/2";
+string etcut        = "TMath::ATan2(mom[1],mom[0]) > TMath::Pi()/2";
+string wtcut        = "TMath::ATan2(mom[1],mom[0]) > 0 && TMath::ATan2(mom[1],mom[0]) < TMath::Pi()/2";
+string wbcut        = "TMath::ATan2(mom[1],mom[0]) < 0 && TMath::ATan2(mom[1],mom[0]) > -1*TMath::Pi()/2";
 
 string inclusivephitruth = "TMath::ATan2(mom_truth[1],mom_truth[0]) < TMath::Pi()";
-string ebcuttruth    = "TMath::ATan2(mom_truth[1],mom_truth[0]) < -1*TMath::Pi()/2";
-string etcuttruth    = "TMath::ATan2(mom_truth[1],mom_truth[0]) > TMath::Pi()/2";
-string wtcuttruth    = "TMath::ATan2(mom_truth[1],mom_truth[0]) > 0 && TMath::ATan2(mom_truth[1],mom_truth[0]) < TMath::Pi()/2";
-string wbcuttruth    = "TMath::ATan2(mom_truth[1],mom_truth[0]) < 0 && TMath::ATan2(mom_truth[1],mom_truth[0]) > -1*TMath::Pi()/2";
+string ebcuttruth        = "TMath::ATan2(mom_truth[1],mom_truth[0]) < -1*TMath::Pi()/2";
+string etcuttruth        = "TMath::ATan2(mom_truth[1],mom_truth[0]) > TMath::Pi()/2";
+string wtcuttruth        = "TMath::ATan2(mom_truth[1],mom_truth[0]) > 0 && TMath::ATan2(mom_truth[1],mom_truth[0]) < TMath::Pi()/2";
+string wbcuttruth        = "TMath::ATan2(mom_truth[1],mom_truth[0]) < 0 && TMath::ATan2(mom_truth[1],mom_truth[0]) > -1*TMath::Pi()/2";
 
-string sectorLabel[NSECT] = {"INCLUSIVE", "ET", "EB", "WT", "WB"};
-string sectorCut[NSECT] = {inclusivephi, etcut, ebcut, wtcut, wbcut};
+string sectorLabel[NSECT]    = {"INCLUSIVE", "ET", "EB", "WT", "WB"};
+string sectorCut[NSECT]      = {inclusivephi, etcut, ebcut, wtcut, wbcut};
 string sectorCutTruth[NSECT] = {inclusivephitruth, etcuttruth, ebcuttruth, wtcuttruth, wbcuttruth};
 
 //Cuts for selected regions with phi discrepancy
@@ -127,7 +125,7 @@ void getTruthInformation()
 
 	for (int i = 0; i < NSECT; i++)
 	{
-		ntp_svxseg_true->Draw(Form("TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1])>>h_DeltaNDeltapT_truth_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), Form("%s && %s && %s && %s && %s", momtruthcut.c_str(), etatruthcut.c_str(), sectorCutTruth[i].c_str(), bbccut.c_str(), zvtxcuttruth.c_str()), "goff");
+		ntp_svxseg_true->Draw(Form("TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1])>>h_DeltaNDeltapT_truth_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), Form("%s && %s && %s && %s && %s", momtruthcut.c_str(), etatruthcut.c_str(), sectorCutTruth[i].c_str(), bbccut.c_str(), zvtxcut.c_str()), "goff");
 		h_DeltaNDeltapT_truth[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_truth_%s", sectorLabel[i].c_str()));
 	}
 
@@ -141,12 +139,13 @@ void getTruthInformation()
 	ntp_svxseg_true->SetBranchAddress("bbcqn", &bbcqn);
 	ntp_svxseg_true->SetBranchAddress("bbcqs", &bbcqs);
 	ntp_svxseg_true->SetBranchAddress("vtx_bbc", &vtx_bbc_truth);
-	cout << "Starting Truth Processing" << endl;
+
 	for (int i = 0; i < ntp_svxseg_true->GetEntries(); i++)
 	{
-		if (i % 1000 == 0) cout << "Track " << i << endl;
+		//if (i % 1000 == 0) cout << "Track " << i << endl;
 		ntp_svxseg_true->GetEntry(i);
-		if (bbcqs + bbcqn >= 2.0)
+
+		if (bbcqs > 0 && bbcqn > 0 && TMath::Abs(vtx_bbc_truth[2]) < 10)
 		{
 			if (eventno != lastEvent)
 			{
@@ -166,14 +165,17 @@ void readFiles()
 	f_data  = new TFile("Data/423844_data_0_1.root");
 
 	//Extract relevant NTuples
-	ntp_svxseg_reco  = (TTree*) f_reco->Get("ntp_svxseg");
-	ntp_event_reco = (TTree*) f_reco->Get("ntp_event");
-	ntp_svxseg_data  = (TTree*) f_data->Get("ntp_svxseg");
-	ntp_event_data   = (TTree*) f_data->Get("ntp_event");
+	ntp_svxseg_reco = (TTree*) f_reco->Get("ntp_svxseg");
+	ntp_event_reco  = (TTree*) f_reco->Get("ntp_event");
+	ntp_svxseg_data = (TTree*) f_data->Get("ntp_svxseg");
+	ntp_event_data  = (TTree*) f_data->Get("ntp_event");
 
 	//Get number of events from NTuples for each case
-	nevents_reco = ntp_event_reco->GetEntries("bbcqn > 0 && bbcqs > 0");
-	nevents_data = ntp_event_data->GetEntries(zvtxcuttruth.c_str());
+	nevents_reco = ntp_event_reco->GetEntries(Form("%s && %s", bbccut.c_str(), zvtxcut.c_str()));
+	nevents_data = ntp_event_data->GetEntries(Form("%s && %s", bbccut.c_str(), zvtxcut.c_str()));
+
+	cout << "NEVENTS RECO = " << nevents_reco << endl;
+	cout << "NEVENTS DATA = " << nevents_data << endl << endl;
 
 	//Extract the spectra from truth AMPT events that fire the BBC trigger
 	getTruthInformation();
@@ -184,7 +186,7 @@ void readFiles()
 		ntp_svxseg_reco->Draw(Form("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h_DeltaNDeltapT_reco_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + bbccut + "&&" + sectorCut[i]).c_str(), "goff");
 		h_DeltaNDeltapT_reco[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_reco_%s", sectorLabel[i].c_str()));
 
-		ntp_svxseg_data->Draw(Form("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h_DeltaNDeltapT_data_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + sectorCut[i]).c_str(), "goff");
+		ntp_svxseg_data->Draw(Form("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h_DeltaNDeltapT_data_%s(%i,0.2,2)", sectorLabel[i].c_str(), NBINS), (eta2cut + "&&" + zvtxcut + "&&" + chisqcut + "&&" + dcacut + "&&" + dca2dcut + "&&" + nhitscut + "&&" + momcut + "&&" + bbccut + "&&" + sectorCut[i]).c_str(), "goff");
 		h_DeltaNDeltapT_data[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_data_%s", sectorLabel[i].c_str()));
 
 		//Chi square distributions
@@ -235,6 +237,10 @@ void readFiles()
 			h_DeltaNDeltapT_data[i]->SetBinError(j, TMath::Sqrt(h_DeltaNDeltapT_data[i]->GetBinContent(j)));
 		}
 	}
+
+	cout << "Raw Entries Reco  = " << h_DeltaNDeltapT_reco[0]->Integral() << endl;
+	cout << "Raw Entries Data  = " << h_DeltaNDeltapT_data[0]->Integral() << endl;
+	cout << "Raw Entries Truth = " << h_DeltaNDeltapT_truth[0]->Integral() << endl << endl;
 }
 
 void extractAzimuthalDistribution()
@@ -341,22 +347,8 @@ void extractAzimuthalDistribution()
 	}
 }
 
-void rebinHistograms()
-{
-	double newBins[NBINS_RB + 1] = {0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.2, 1.4, 1.6, 2.0};
-
-	for (int i = 0; i < NSECT; i++)
-	{
-		h_DeltaNDeltapT_truth_rebinned[i] = (TH1F*) h_DeltaNDeltapT_truth[i]->Rebin(NBINS_RB, Form("h_DeltaNDeltapT_truth_rebinned_%s", sectorLabel[i].c_str()), newBins);
-		h_DeltaNDeltapT_reco_rebinned[i] = (TH1F*) h_DeltaNDeltapT_reco[i]->Rebin(NBINS_RB, Form("h_DeltaNDeltapT_reco_rebinned_%s", sectorLabel[i].c_str()), newBins);
-		h_DeltaNDeltapT_data_rebinned[i] = (TH1F*) h_DeltaNDeltapT_data[i]->Rebin(NBINS_RB, Form("h_DeltaNDeltapT_data_rebinned_%s", sectorLabel[i].c_str()), newBins);
-	}
-}
-
 void normalizeHistograms()
 {
-	//Normalize by the number of events
-	//Divide by the bin width, the acceptance and bin pT
 	//Since the Sumw2 structure is already in place, errors will be recomputed correctly
 	for (int i = 0; i < NSECT; i++)
 	{
@@ -368,13 +360,48 @@ void normalizeHistograms()
 		h_dNdpT_reco[i]->Scale(1.0 / nevents_reco);
 		h_dNdpT_data[i]->Scale(1.0 / nevents_data);
 
+		if (i == 0)
+		{
+			cout << "Ntracks_reco after event norm = " << h_dNdpT_reco[i]->Integral() << endl;
+			cout << "Ntracks_data after event norm = " << h_dNdpT_data[i]->Integral() << endl;
+			cout << "Ntracks_truth after event norm = " << h_dNdpT_truth[i]->Integral() << endl << endl;
+		}
+
 		h_dNdpT_truth[i]->Scale(1.0 / 0.7);
 		h_dNdpT_reco[i]->Scale(1.0 / 0.7);
 		h_dNdpT_data[i]->Scale(1.0 / 0.7);
 
-		h_dNdpT_truth[i]->Scale(1.0 / 2 * TMath::Pi());
-		h_dNdpT_reco[i]->Scale(1.0 / 2 * TMath::Pi());
-		h_dNdpT_data[i]->Scale(1.0 / 2 * TMath::Pi());
+		if (i == 0)
+		{
+			cout << "Ntracks_reco after Deta norm = " << h_dNdpT_reco[i]->Integral() << endl;
+			cout << "Ntracks_data after Deta norm = " << h_dNdpT_data[i]->Integral() << endl;
+			cout << "Ntracks_truth after Deta norm = " << h_dNdpT_truth[i]->Integral() << endl << endl;
+		}
+
+		h_dNdpT_truth[i]->Scale(1.0 / (2 * TMath::Pi()));
+		h_dNdpT_reco[i]->Scale(1.0 / (2 * TMath::Pi()));
+		h_dNdpT_data[i]->Scale(1.0 / (2 * TMath::Pi()));
+
+		if (i == 0)
+		{
+			cout << "Ntracks_reco after 2pi norm = " << h_dNdpT_reco[i]->Integral() << endl;
+			cout << "Ntracks_data after 2pi norm = " << h_dNdpT_data[i]->Integral() << endl;
+			cout << "Ntracks_truth after 2pi norm = " << h_dNdpT_truth[i]->Integral() << endl << endl;
+		}
+
+		for (int j = 1; j <= NBINS; j++)
+		{
+			h_dNdpT_truth[i]->SetBinContent(j, h_dNdpT_truth[i]->GetBinContent(j) / h_dNdpT_truth[i]->GetBinWidth(j));
+			h_dNdpT_reco[i]->SetBinContent(j, h_dNdpT_reco[i]->GetBinContent(j) / h_dNdpT_reco[i]->GetBinWidth(j));
+			h_dNdpT_data[i]->SetBinContent(j, h_dNdpT_data[i]->GetBinContent(j) / h_dNdpT_data[i]->GetBinWidth(j));
+		}
+
+		if (i == 0)
+		{
+			cout << "Ntracks_reco after norm = " << h_dNdpT_reco[i]->Integral() << endl;
+			cout << "Ntracks_data after norm = " << h_dNdpT_data[i]->Integral() << endl;
+			cout << "Ntracks_truth after norm = " << h_dNdpT_truth[i]->Integral() << endl << endl;
+		}
 
 		if (i > 0)
 		{
@@ -397,12 +424,6 @@ void normalizeHistograms()
 		//Normalize chisq distributions to unit at the maximum point
 		h_chisqndf_data[i]->Scale(1.0 / h_chisqndf_data[i]->GetMaximum());
 		h_chisqndf_reco[i]->Scale(1.0 / h_chisqndf_reco[i]->GetMaximum());
-	}
-
-	for (int i = 0; i < 4; i++)
-	{
-		//h_eta_regions_reco[i]->Scale(1.0 / nevents_reco);
-		//h_eta_regions_data[i]->Scale(1.0 / nevents_data);
 	}
 }
 
@@ -437,7 +458,7 @@ void plot()
 
 void writeToFile()
 {
-	TFile *fout = new TFile("WorkingFiles/normSpectra_1_0_1_0_v_0_1.root", "RECREATE");
+	TFile *fout = new TFile("WorkingFiles/normSpectra_1_0_1_0_v_0_1_anomaly_fix1.root", "RECREATE");
 
 	for (int i = 0; i < NSECT; i++)
 	{
@@ -471,7 +492,6 @@ void RebinMeasuredSpectra()
 {
 	readFiles();
 	extractAzimuthalDistribution();
-	//rebinHistograms();
 	normalizeHistograms();
 	computeCorrection();
 	plot();
