@@ -70,11 +70,11 @@ string dca2dcut     = "TMath::Abs(dca2d) < 0.05";
 //string momtruthcut  = "TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1]) > 0.2";
 string momcut       = "TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 0";
 string momtruthcut  = "TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1]) > 0";
-string nhitscut     = "nhits[0]+nhits[1]+nhits[2]+nhits[3] == 4";
+string nhitscut     = "nhits[0] > 0 && nhits[1]> 0 && nhits[2] > 0 && nhits[3] > 0";
 string eta1cut      = "TMath::Abs(eta) < 0.35";
 string eta2cut      = "TMath::Abs(TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) < 0.35";
 string etatruthcut  = "TMath::Abs(TMath::ATanH(mom_truth[2]/TMath::Sqrt(mom_truth[0]*mom_truth[0] + mom_truth[1]*mom_truth[1] + mom_truth[2]*mom_truth[2]))) < 0.35";
-string bbccut       = "bbcqs > 0 && bbcqn > 0";
+string bbccut       = "pmtbbcs > 0 && pmtbbcn > 0";
 
 //Track cut to remove anomaly in ET (2 < phi(wrapped around = not wrapped around) < 2.5)
 string anomalycutet = "TMath::ATan2(mom[1],mom[0]) < 2 && TMath::ATan2(mom[1],mom[0]) > 2.25";
@@ -129,29 +129,25 @@ void getTruthInformation()
 		h_DeltaNDeltapT_truth[i] = (TH1F*) gDirectory->FindObject(Form("h_DeltaNDeltapT_truth_%s", sectorLabel[i].c_str()));
 	}
 
-	//Count the number of events that fire the BBC trigger
+	//Count events that fire the bbc trigger and have a narrow vertex
+	float vtx[3];
 	int eventno;
-	float bbcqs;
-	float bbcqn;
-	float vtx_bbc_truth[3];
-	int lastEvent = -1;
+	int pmtbbcs;
+	int pmtbbcn;
+	ntp_svxseg_true->SetBranchAddress("vtx_bbc", &vtx);
 	ntp_svxseg_true->SetBranchAddress("eventno", &eventno);
-	ntp_svxseg_true->SetBranchAddress("bbcqn", &bbcqn);
-	ntp_svxseg_true->SetBranchAddress("bbcqs", &bbcqs);
-	ntp_svxseg_true->SetBranchAddress("vtx_bbc", &vtx_bbc_truth);
+	ntp_svxseg_true->SetBranchAddress("pmtbbcs", &pmtbbcs);
+	ntp_svxseg_true->SetBranchAddress("pmtbbcn", &pmtbbcn);
 
+	int lastEvent = -9999;
 	for (int i = 0; i < ntp_svxseg_true->GetEntries(); i++)
 	{
-		//if (i % 1000 == 0) cout << "Track " << i << endl;
 		ntp_svxseg_true->GetEntry(i);
 
-		if (bbcqs > 0 && bbcqn > 0 && TMath::Abs(vtx_bbc_truth[2]) < 10)
+		if (eventno != lastEvent && TMath::Abs(vtx[2]) < 10 && pmtbbcs > 0 && pmtbbcn > 0)
 		{
-			if (eventno != lastEvent)
-			{
-				lastEvent = eventno;
-				nevents_truth++;
-			}
+			nevents_truth++;
+			lastEvent = eventno;
 		}
 	}
 
@@ -161,8 +157,8 @@ void getTruthInformation()
 void readFiles()
 {
 	//Read in files
-	f_reco    = new TFile("Data/423844_reco_1_0_1_0.root");
-	f_data  = new TFile("Data/423844_data_0_1.root");
+	f_reco    = new TFile("Data/423844_reco_1_0_1_0_050416.root");
+	f_data  = new TFile("Data/423844_data_0_1_050216.root");
 
 	//Extract relevant NTuples
 	ntp_svxseg_reco = (TTree*) f_reco->Get("ntp_svxseg");
@@ -267,8 +263,8 @@ void extractAzimuthalDistribution()
 	float ndf_reco;
 	float dca_reco;
 	float dca2d_reco;
-	float bbcqn_reco;
-	float bbcqs_reco;
+	int pmtbbcn_reco;
+	int pmtbbcs_reco;
 
 	float mom_data[3];
 	float vtx_data[3];
@@ -285,8 +281,8 @@ void extractAzimuthalDistribution()
 	ntp_svxseg_reco->SetBranchAddress("ndf", &ndf_reco);
 	ntp_svxseg_reco->SetBranchAddress("dca", &dca_reco);
 	ntp_svxseg_reco->SetBranchAddress("dca2d", &dca2d_reco);
-	ntp_svxseg_reco->SetBranchAddress("bbcqs", &bbcqs_reco);
-	ntp_svxseg_reco->SetBranchAddress("bbcqn", &bbcqn_reco);
+	ntp_svxseg_reco->SetBranchAddress("pmtbbcs", &pmtbbcs_reco);
+	ntp_svxseg_reco->SetBranchAddress("pmtbbcn", &pmtbbcn_reco);
 
 	for (int i = 0; i < ntp_svxseg_reco->GetEntries(); i++)
 	{
@@ -295,7 +291,7 @@ void extractAzimuthalDistribution()
 		float phi = TMath::ATan2(mom_reco[1], mom_reco[0]);
 		float eta = TMath::ATanH(mom_reco[2] / TMath::Sqrt(mom_reco[0] * mom_reco[0] + mom_reco[1] * mom_reco[1] + mom_reco[2] * mom_reco[2]));
 
-		if ((nhits_reco[0] + nhits_reco[1] + nhits_reco[2] + nhits_reco[3] != 4) || TMath::Abs(vtx_reco[2]) > 10 || TMath::Abs(dca_reco) > 0.15 || TMath::Abs(dca2d_reco) > 0.05 || chisq_reco / ndf_reco > 3 || TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom_reco[2] / TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1] + mom_reco[2]*mom_reco[2]))) > 0.35 || bbcqn_reco == 0 || bbcqs_reco == 0)
+		if ((nhits_reco[0] + nhits_reco[1] + nhits_reco[2] + nhits_reco[3] != 4) || TMath::Abs(vtx_reco[2]) > 10 || TMath::Abs(dca_reco) > 0.15 || TMath::Abs(dca2d_reco) > 0.05 || chisq_reco / ndf_reco > 3 || TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom_reco[2] / TMath::Sqrt(mom_reco[0]*mom_reco[0] + mom_reco[1]*mom_reco[1] + mom_reco[2]*mom_reco[2]))) > 0.35 || pmtbbcn_reco == 0 || pmtbbcs_reco == 0)
 		{
 			continue;
 		}
@@ -458,7 +454,7 @@ void plot()
 
 void writeToFile()
 {
-	TFile *fout = new TFile("WorkingFiles/normSpectra_1_0_1_0_v_0_1_anomaly_fix1.root", "RECREATE");
+	TFile *fout = new TFile("WorkingFiles/normSpectra_1_0_1_0_v_0_1_050216.root", "RECREATE");
 
 	for (int i = 0; i < NSECT; i++)
 	{
