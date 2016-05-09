@@ -98,6 +98,290 @@ TH1F *h_pT_ampt;
 //-----------------------------
 // Functions
 //-----------------------------
+
+void normalizeEtaPhi()
+{
+	if (normIntegral)
+	{
+		//float normalizationSims = h_eta_phi_sims->Integral(1, h_eta_phi_sims->GetNbinsX(), h_eta_phi_sims->GetYaxis()->FindBin(0.0), h_eta_phi_sims->GetYaxis()->FindBin(1.2));
+		//float normalizationData = h_eta_phi_data->Integral(1, h_eta_phi_data->GetNbinsX(), h_eta_phi_data->GetYaxis()->FindBin(0.0), h_eta_phi_sims->GetYaxis()->FindBin(1.2));
+		float normalizationSims = h_eta_phi_sims->Integral();
+		float normalizationData = h_eta_phi_data->Integral();
+		h_eta_phi_sims->Scale(1.0 / normalizationSims);
+		h_eta_phi_data->Scale(1.0 / normalizationData);
+	}
+
+	//Project phi for inclusive eta
+	TH1F *hPhiSims = (TH1F*) h_eta_phi_sims->ProjectionY("hPhiSims");
+	TH1F *hPhiData = (TH1F*) h_eta_phi_data->ProjectionY("hPhiData");
+	hPhiData->SetLineColor(kRed);
+
+	hPhiSims->GetYaxis()->SetTitleFont(62);
+	hPhiSims->GetYaxis()->SetLabelFont(62);
+	hPhiSims->GetXaxis()->SetTitleFont(62);
+	hPhiSims->GetXaxis()->SetLabelFont(62);
+
+	hPhiSims->SetTitle("");
+
+	if (normIntegral)
+	{
+		hPhiSims->GetYaxis()->SetTitle("AU");
+		hPhiSims->GetYaxis()->SetRangeUser(0, 0.012);
+	}
+	else
+	{
+		hPhiSims->GetYaxis()->SetTitle("Tracks / Event");
+		hPhiSims->GetYaxis()->SetRangeUser(0, 0.008);
+	}
+
+	TCanvas *cPhi = new TCanvas("cPhi", "cPhi", 1200, 600);
+	hPhiSims->SetLineWidth(2);
+	hPhiData->SetLineWidth(2);
+	hPhiSims->Draw();
+	hPhiData->Draw("same");
+
+	//Draw lines at edges between azimuthal regions
+	float lineHeight = 0.008;
+	if (normIntegral)
+	{
+		lineHeight = 0.012;
+	}
+
+	TLine *tl1_azimuth = new TLine(0, 0, 0, lineHeight);
+	TLine *tl2_azimuth = new TLine(TMath::Pi() / 2, 0, TMath::Pi() / 2, lineHeight);
+	TLine *tl3_azimuth = new TLine(TMath::Pi(), 0, TMath::Pi(), lineHeight);
+
+	tl1_azimuth->SetLineWidth(5);
+	tl2_azimuth->SetLineWidth(5);
+	tl3_azimuth->SetLineWidth(5);
+
+	tl1_azimuth->Draw("same");
+	tl2_azimuth->Draw("same");
+	tl3_azimuth->Draw("same");
+
+	//Draw labels to indicate azimuthal regions
+	TLatex *tl1_wb = new TLatex(0.15, 0.8, "WB");
+	tl1_wb->SetNDC(kTRUE);
+	tl1_wb->Draw("same");
+
+	TLatex *tl1_wt = new TLatex(0.4, 0.8, "WT");
+	tl1_wt->SetNDC(kTRUE);
+	tl1_wt->Draw("same");
+
+	TLatex *tl1_et = new TLatex(0.57, 0.8, "ET");
+	tl1_et->SetNDC(kTRUE);
+	tl1_et->Draw("same");
+
+	TLatex *tl1_eb = new TLatex(0.75, 0.8, "EB");
+	tl1_eb->SetNDC(kTRUE);
+	tl1_eb->Draw("same");
+
+	TLegend *tlegPhi = new TLegend(0.12, 0.6, 0.22, 0.7);
+	tlegPhi->SetLineColor(kWhite);
+	tlegPhi->AddEntry(h_dPhi_data, "DATA", "L");
+	tlegPhi->AddEntry(h_dPhi_sims, "AMPT RECO", "L");
+	tlegPhi->Draw("same");
+
+	//Project eta for each of the azimuthal regions of interest
+	
+	TH1F *hEta_ETData = (TH1F*) h_eta_phi_data->ProjectionX("hEta_ETData", h_eta_phi_data->GetYaxis()->FindBin(TMath::Pi() / 2), h_eta_phi_data->GetYaxis()->FindBin(TMath::Pi()));
+	TH1F *hEta_EBData = (TH1F*) h_eta_phi_data->ProjectionX("hEta_EBData", h_eta_phi_data->GetYaxis()->FindBin(TMath::Pi()), h_eta_phi_data->GetNbinsY());
+	TH1F *hEta_WTData = (TH1F*) h_eta_phi_data->ProjectionX("hEta_WTData", h_eta_phi_data->GetYaxis()->FindBin(0.0), h_eta_phi_data->GetYaxis()->FindBin(TMath::Pi() / 2));
+	TH1F *hEta_WBData = (TH1F*) h_eta_phi_data->ProjectionX("hEta_WBData", 1, h_eta_phi_data->GetYaxis()->FindBin(0.0));
+
+	TH1F *hEta_ETSims = (TH1F*) h_eta_phi_sims->ProjectionX("hEta_ETSims", h_eta_phi_sims->GetYaxis()->FindBin(TMath::Pi() / 2), h_eta_phi_sims->GetYaxis()->FindBin(TMath::Pi()));
+	TH1F *hEta_EBSims = (TH1F*) h_eta_phi_sims->ProjectionX("hEta_EBSims", h_eta_phi_sims->GetYaxis()->FindBin(TMath::Pi()), h_eta_phi_sims->GetNbinsY());
+	TH1F *hEta_WTSims = (TH1F*) h_eta_phi_sims->ProjectionX("hEta_WTSims", h_eta_phi_sims->GetYaxis()->FindBin(0.0), h_eta_phi_sims->GetYaxis()->FindBin(TMath::Pi() / 2));
+	TH1F *hEta_WBSims = (TH1F*) h_eta_phi_sims->ProjectionX("hEta_WBSims", 1, h_eta_phi_sims->GetYaxis()->FindBin(0.0));
+	
+	/*
+
+	//Project eta for each azimuthal region of interest, excluding the anomalous phi regions in the west arms:
+	// -0.8 < phi < -0.4
+	//  0.6 < phi < 0.85
+
+	hEta_WBSims = new TH1F("hEta_WBSims", "hEta_WBSims", 200, -1.5, 1.5);
+	hEta_WTSims = new TH1F("hEta_WTSims", "hEta_WTSims", 200, -1.5, 1.5);
+	hEta_EBSims = new TH1F("hEta_EBSims", "hEta_EBSims", 200, -1.5, 1.5);
+	hEta_ETSims = new TH1F("hEta_ETSims", "hEta_ETSims", 200, -1.5, 1.5);
+
+	hEta_WBData = new TH1F("hEta_WBData", "hEta_WBData", 200, -1.5, 1.5);
+	hEta_WTData = new TH1F("hEta_WTData", "hEta_WTData", 200, -1.5, 1.5);
+	hEta_EBData = new TH1F("hEta_EBData", "hEta_EBData", 200, -1.5, 1.5);
+	hEta_ETData = new TH1F("hEta_ETData", "hEta_ETData", 200, -1.5, 1.5);
+
+	for (int i = 1; i <= h_eta_phi_sims->GetNbinsY(); i++)
+	{
+		float phi = h_eta_phi_sims->GetYaxis()->GetBinCenter(i);
+
+		for (int j = 1; j <= h_eta_phi_sims->GetNbinsX(); j++)
+		{
+			float eta = h_eta_phi_sims->GetXaxis()->GetBinCenter(j);
+			float binEta = hEta_WBSims->FindBin(eta);
+			float val = h_eta_phi_sims->GetBinContent(j, i);
+
+			if ((phi > -0.8 && phi < -0.4) || (-0.2 < phi && phi < 0.45) || (phi > 0.6 && phi < 0.85))
+			{
+				continue;
+			}
+
+			if (phi < 0)
+			{
+				hEta_WBSims->SetBinContent(binEta, hEta_WBSims->GetBinContent(binEta) + val);
+			}
+			else if (phi > 0 && phi < TMath::Pi() / 2)
+			{
+				hEta_WTSims->SetBinContent(binEta, hEta_WTSims->GetBinContent(binEta) + val);
+			}
+			else if (phi > TMath::Pi() / 2 && phi < TMath::Pi())
+			{
+				hEta_ETSims->SetBinContent(binEta, hEta_ETSims->GetBinContent(binEta) + val);
+
+			}
+			else if (phi > TMath::Pi())
+			{
+				hEta_EBSims->SetBinContent(binEta, hEta_EBSims->GetBinContent(binEta) + val);
+			}
+		}
+	}
+
+	for (int i = 1; i <= h_eta_phi_data->GetNbinsY(); i++)
+	{
+		float phi = h_eta_phi_data->GetYaxis()->GetBinCenter(i);
+
+		for (int j = 1; j <= h_eta_phi_data->GetNbinsX(); j++)
+		{
+			float eta = h_eta_phi_data->GetXaxis()->GetBinCenter(j);
+			float binEta = hEta_WBData->FindBin(eta);
+			float val = h_eta_phi_data->GetBinContent(j, i);
+
+			if ((phi > -0.8 && phi < -0.4) || (phi > 0.6 && phi < 0.85))
+			{
+				continue;
+			}
+
+			if (phi < 0)
+			{
+				hEta_WBData->SetBinContent(binEta, hEta_WBData->GetBinContent(binEta) + val);
+			}
+			else if (phi > 0 && phi < TMath::Pi() / 2)
+			{
+				hEta_WTData->SetBinContent(binEta, hEta_WTData->GetBinContent(binEta) + val);
+			}
+			else if (phi > TMath::Pi() / 2 && phi < TMath::Pi())
+			{
+				hEta_ETData->SetBinContent(binEta, hEta_ETData->GetBinContent(binEta) + val);
+
+			}
+			else if (phi > TMath::Pi())
+			{
+				hEta_EBData->SetBinContent(binEta, hEta_EBData->GetBinContent(binEta) + val);
+			}
+		}
+	}
+	*/
+
+	hEta_ETData->Rebin(4);
+	hEta_WTData->Rebin(4);
+	hEta_EBData->Rebin(4);
+	hEta_WBData->Rebin(4);
+
+	hEta_ETSims->Rebin(4);
+	hEta_WTSims->Rebin(4);
+	hEta_EBSims->Rebin(4);
+	hEta_WBSims->Rebin(4);
+
+	hEta_ETData->SetLineWidth(2);
+	hEta_WTData->SetLineWidth(2);
+	hEta_EBData->SetLineWidth(2);
+	hEta_WBData->SetLineWidth(2);
+
+	hEta_ETSims->SetLineWidth(2);
+	hEta_WTSims->SetLineWidth(2);
+	hEta_EBSims->SetLineWidth(2);
+	hEta_WBSims->SetLineWidth(2);
+
+	TCanvas *cEta_Sectors = new TCanvas("cEta_Sectors", "cEta_Sectors", 1000, 1200);
+	cEta_Sectors->Divide(2, 2);
+
+	cEta_Sectors->cd(1);
+	gPad->SetLeftMargin(0.2);
+	hEta_WTData->SetLineColor(kRed);
+	hEta_WTData->SetTitle("WT");
+	hEta_WTData->GetXaxis()->SetLabelFont(62);
+	hEta_WTData->GetXaxis()->SetTitleFont(62);
+	hEta_WTData->GetXaxis()->SetTitleSize(0.05);
+	hEta_WTData->GetXaxis()->SetLabelSize(0.05);
+	hEta_WTData->GetYaxis()->SetLabelFont(62);
+	hEta_WTData->GetYaxis()->SetTitleFont(62);
+	hEta_WTData->GetYaxis()->SetTitleSize(0.05);
+	hEta_WTData->GetYaxis()->SetLabelSize(0.05);
+	hEta_WTData->GetYaxis()->SetTitle("Tracks / Event");
+	if (normIntegral) {hEta_WTData->GetYaxis()->SetTitle("AU");}
+
+	hEta_WTData->Draw();
+	hEta_WTSims->Draw("same");
+	TLegend *tlegEtaSector = new TLegend(0.65, 0.75, 0.85, 0.85);
+	tlegEtaSector->SetLineColor(kWhite);
+	tlegEtaSector->AddEntry(hEta_WTData, "DATA", "L");
+	tlegEtaSector->AddEntry(hEta_WTSims, "AMPT RECO", "L");
+	tlegEtaSector->Draw("same");
+
+	cEta_Sectors->cd(2);
+	gPad->SetLeftMargin(0.2);
+	hEta_ETData->SetLineColor(kRed);
+	hEta_ETData->SetTitle("ET");
+	hEta_ETData->GetXaxis()->SetLabelFont(62);
+	hEta_ETData->GetXaxis()->SetTitleFont(62);
+	hEta_ETData->GetXaxis()->SetTitleSize(0.05);
+	hEta_ETData->GetXaxis()->SetLabelSize(0.05);
+	hEta_ETData->GetYaxis()->SetLabelFont(62);
+	hEta_ETData->GetYaxis()->SetTitleFont(62);
+	hEta_ETData->GetYaxis()->SetTitleSize(0.05);
+	hEta_ETData->GetYaxis()->SetLabelSize(0.05);
+	hEta_ETData->GetYaxis()->SetTitle("Tracks / Event");
+	if (normIntegral) {hEta_ETData->GetYaxis()->SetTitle("AU");}
+
+	hEta_ETData->Draw();
+	hEta_ETSims->Draw("same");
+
+	cEta_Sectors->cd(3);
+	gPad->SetLeftMargin(0.2);
+	hEta_WBData->SetLineColor(kRed);
+	hEta_WBData->SetTitle("WB");
+	hEta_WBData->GetXaxis()->SetLabelFont(62);
+	hEta_WBData->GetXaxis()->SetTitleFont(62);
+	hEta_WBData->GetXaxis()->SetTitleSize(0.05);
+	hEta_WBData->GetXaxis()->SetLabelSize(0.05);
+	hEta_WBData->GetYaxis()->SetLabelFont(62);
+	hEta_WBData->GetYaxis()->SetTitleFont(62);
+	hEta_WBData->GetYaxis()->SetTitleSize(0.05);
+	hEta_WBData->GetYaxis()->SetLabelSize(0.05);
+	hEta_WBData->GetYaxis()->SetTitle("Tracks / Event");
+	if (normIntegral) {hEta_WBData->GetYaxis()->SetTitle("AU");}
+
+	hEta_WBData->Draw();
+	hEta_WBSims->Draw("same");
+
+	cEta_Sectors->cd(4);
+	gPad->SetLeftMargin(0.2);
+	hEta_EBData->SetLineColor(kRed);
+	hEta_EBData->SetTitle("EB");
+	hEta_EBData->GetXaxis()->SetLabelFont(62);
+	hEta_EBData->GetXaxis()->SetTitleFont(62);
+	hEta_EBData->GetXaxis()->SetTitleSize(0.05);
+	hEta_EBData->GetXaxis()->SetLabelSize(0.05);
+	hEta_EBData->GetYaxis()->SetLabelFont(62);
+	hEta_EBData->GetYaxis()->SetTitleFont(62);
+	hEta_EBData->GetYaxis()->SetTitleSize(0.05);
+	hEta_EBData->GetYaxis()->SetLabelSize(0.05);
+	hEta_EBData->GetYaxis()->SetTitle("Tracks / Event");
+	if (normIntegral) {hEta_EBData->GetYaxis()->SetTitle("AU");}
+
+	hEta_EBData->Draw();
+	hEta_EBSims->Draw("same");
+}
+
 void plotPhi()
 {
 	h_dPhi_sims_highpT->Rebin(4);
@@ -106,9 +390,6 @@ void plotPhi()
 	//Normalize to unit integral if indicated
 	if (normIntegral)
 	{
-		cout << "PHI SIMS NORM = " << h_dPhi_sims->Integral() << endl;
-		cout << "PHI DATA NORM = " << h_dPhi_data->Integral() << endl << endl;
-
 		h_dPhi_sims->Scale(1.0 / h_dPhi_sims->Integral());
 		h_dPhi_data->Scale(1.0 / h_dPhi_data->Integral());
 
@@ -415,6 +696,8 @@ void plotClusters()
 	h_phi_clusters_B2_data->Draw();
 	h_phi_clusters_B2_sims->Draw("same");
 
+	cout << "B2 Ratio = " << h_zed_clusters_B2_data->Integral() / h_zed_clusters_B2_sims->Integral() << endl;
+
 	cClustersPhi->cd(4);
 	gPad->SetLeftMargin(0.2);
 	h_phi_clusters_B3_data->GetXaxis()->SetLabelFont(62);
@@ -428,6 +711,8 @@ void plotClusters()
 	h_phi_clusters_B3_data->GetYaxis()->SetTitleOffset(1.6);
 	h_phi_clusters_B3_data->Draw();
 	h_phi_clusters_B3_sims->Draw("same");
+
+	cout << "B3 Ratio = " << h_zed_clusters_B3_data->Integral() / h_zed_clusters_B3_sims->Integral() << endl;
 
 	TCanvas *cClustersZed = new TCanvas("cClustersEta", "cClustersEta", 700, 700);
 	cClustersZed->Divide(2, 2);
@@ -498,7 +783,7 @@ void plotTrackVariables()
 {
 	TLatex *tl_4hit = new TLatex(0.6, 0.5, "4-Hit Tracks");
 	tl_4hit->SetNDC(kTRUE);
-	TLatex *tl_eta = new TLatex(0.6, 0.45, "|#eta| < 0.35");
+	TLatex *tl_eta = new TLatex(0.6, 0.45, "|#eta| < 1.0");
 	tl_eta->SetNDC(kTRUE);
 	TLatex *tl_pT = new TLatex(0.6, 0.4, "p_{T} > 0.2 GeV/c");
 	tl_pT->SetNDC(kTRUE);
@@ -583,7 +868,7 @@ void CompareTrackVariables()
 {
 	gStyle->SetOptStat(0);
 
-	TFile *f_data = new TFile("WorkingFiles/trackvars_data_1_0_1_0_050216.root");
+	TFile *f_data = new TFile("WorkingFiles/trackvars_data_def.root");
 
 	h_dPhi_data          = (TH1F*) f_data->Get("h_dPhi");
 	h_dPhi_data_lowpT    = (TH1F*) f_data->Get("h_dPhi_lowpT");
@@ -613,7 +898,7 @@ void CompareTrackVariables()
 	h_zed_clusters_B3_data    = (TH1F*) f_data->Get("h_zed_clusters_B3");
 	h_eta_phi_data            = (TH2F*) f_data->Get("h_eta_phi");
 
-	TFile *f_sims = new TFile("WorkingFiles/trackvars_sims_1_0_1_0_050416_t.root");
+	TFile *f_sims = new TFile("WorkingFiles/trackvars_sims_def.root");
 
 	h_dPhi_sims          = (TH1F*) f_sims->Get("h_dPhi");
 	h_dPhi_sims_lowpT    = (TH1F*) f_sims->Get("h_dPhi_lowpT");
@@ -697,8 +982,9 @@ void CompareTrackVariables()
 	h_pT_sims->SetLineWidth(2);
 
 	//Plot things
-	plotPhi();
-	plotEta();
+	//plotPhi();
+	//plotEta();
+	normalizeEtaPhi(); //Simultaneous normalization of eta and phi distributions
 	plotClusters();
 	plotTrackVariables();
 }
