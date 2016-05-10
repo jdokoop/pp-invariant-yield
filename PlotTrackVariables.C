@@ -1,8 +1,8 @@
 //------------------------------------------
-// Macro to plot track variables such as 
+// Macro to plot track variables such as
 // pseudorapidity, DCA(2D), pT, phi, etc.
-// 
-// Input file: result from running the 
+//
+// Input file: result from running the
 // Run15pp200_Issues_Check module on a DST,
 // either from data or PISA simulation.
 //
@@ -18,6 +18,12 @@ using namespace std;
 //------------------------------------------
 // Variables
 //------------------------------------------
+
+//Flags to indicate data under consideration
+// 1 = clock trigger data
+// 2 = mb data
+// 3 = mb sims
+const int DATA = 3;
 
 //NTuples to be read from file, with event, cluster and track information
 TTree *ntp_event;
@@ -55,6 +61,9 @@ TH2F *h_clusters_B0;
 TH2F *h_clusters_B1;
 TH2F *h_clusters_B2;
 
+//2D eta-phi histogram
+TH2F *h_eta_phi;
+
 //Histograms for plotting variables
 TH1F *h_chisqndf;
 TH1F *h_dca;
@@ -65,12 +74,12 @@ int nevents;
 
 const float PI = TMath::Pi();
 
-string zvtxcut  = "TMath::Abs(vtx[2]) < 1";
+string zvtxcut  = "TMath::Abs(vtx_bbc[2]) < 1";
 string chisqcut = "chisq/ndf < 3";
 string dcacut   = "TMath::Abs(dca) < 0.15";
 string dca2dcut = "TMath::Abs(dca2d) < 0.05";
 string momcut   = "TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 0.2";
-string nhitscut = "nhits[0]+nhits[1]+nhits[2]+nhits[3] == 4";
+string nhitscut = "nhits[0] >= 1 && nhits[1] >= 1 && nhits[2] >= 1 && nhits[3] >= 1";
 string ebcut    = "TMath::ATan2(mom[1],mom[0]) < -1*TMath::Pi()/2";
 string etcut    = "TMath::ATan2(mom[1],mom[0]) > TMath::Pi()/2";
 string wtcut    = "TMath::ATan2(mom[1],mom[0]) > 0 && TMath::ATan2(mom[1],mom[0]) < TMath::Pi()/2";
@@ -78,38 +87,47 @@ string wbcut    = "TMath::ATan2(mom[1],mom[0]) < 0 && TMath::ATan2(mom[1],mom[0]
 string lopTcut  = "TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 0.2 && TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) < 0.5";
 string midpTcut = "TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) < 1.0 && TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 0.5";
 string hipTcut  = "TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 1.0";
-string etacut   = "TMath::Abs(TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) < 1";
+string etacutWide   = "TMath::Abs(TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) < 1.0";
+string etacutNarrow   = "TMath::Abs(TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) < 1.0";
+string bbccut   = "pmtbbcn > 0 && pmtbbcs > 0";
 
 //------------------------------------------
 // Functions
 //------------------------------------------
 int determineNumEvents()
 {
-	return ntp_event->GetEntries(zvtxcut.c_str());
+	if (DATA == 1)
+	{
+		return ntp_event->GetEntries();
+	}
+	else
+	{
+		return ntp_event->GetEntries((zvtxcut + "&&" + bbccut).c_str());
+	}
 }
 
 void plotVariables()
 {
 	//Chisq
-	ntp_svxseg->Draw("chisq/ndf>>htmpchisq(100,0,10)", (nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + momcut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("chisq/ndf>>htmpchisq(100,0,10)", (nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + momcut + "&&" + etacutNarrow + "&&" + bbccut).c_str(), "goff");
 	h_chisqndf = (TH1F*) gDirectory->FindObject("htmpchisq");
 	h_chisqndf->GetXaxis()->SetTitle("p_{T} [GeV/c]");
 	h_chisqndf->Scale(1.0 / nevents);
 
 	//DCA
-	ntp_svxseg->Draw("dca>>htmpdca(400,-3,3)", (nhitscut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("dca>>htmpdca(400,-3,3)", (nhitscut + "&&" + etacutNarrow + "&&" + bbccut + "&&" + momcut).c_str(), "goff");
 	h_dca = (TH1F*) gDirectory->FindObject("htmpdca");
 	h_dca->GetXaxis()->SetTitle("p_{T} [GeV/c]");
 	h_dca->Scale(1.0 / nevents);
 
 	//DCA2D
-	ntp_svxseg->Draw("dca2d>>htmpdca2d(400,-3,3)", (nhitscut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("dca2d>>htmpdca2d(400,-3,3)", (nhitscut + "&&" + etacutNarrow + "&&" + bbccut + "&&" + momcut).c_str(), "goff");
 	h_dca2d = (TH1F*) gDirectory->FindObject("htmpdca2d");
 	h_dca2d->GetXaxis()->SetTitle("p_{T} [GeV/c]");
 	h_dca2d->Scale(1.0 / nevents);
 
 	//pT
-	ntp_svxseg->Draw("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>htmppt(400,0,10)", (nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>htmppt(400,0,10)", (nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + etacutNarrow + "&&" + bbccut).c_str(), "goff");
 	h_pT = (TH1F*) gDirectory->FindObject("htmppt");
 	h_pT->GetXaxis()->SetTitle("p_{T} [GeV/c]");
 	h_pT->Scale(1.0 / nevents);
@@ -137,6 +155,56 @@ void plotVariables()
 	h_pT->Draw();
 }
 
+void getEtaPhiDistribution()
+{
+	h_eta_phi = new TH2F("h_eta_phi", "h_eta_phi;#eta;#phi", 200, -1.5, 1.5, 400, -0.5 * TMath::Pi(), 1.5 * TMath::Pi());
+
+	float mom[3];
+	float vtx_bbc[3];
+	float chisq;
+	float dca;
+	float dca2d;
+	int pmtbbcs;
+	int pmtbbcn;
+	int nhits[4];
+	float ndf;
+
+	ntp_svxseg->SetBranchAddress("mom", &mom);
+	ntp_svxseg->SetBranchAddress("vtx_bbc", &vtx_bbc);
+	ntp_svxseg->SetBranchAddress("nhits", &nhits);
+	ntp_svxseg->SetBranchAddress("dca2d", &dca2d);
+	ntp_svxseg->SetBranchAddress("dca", &dca);
+	ntp_svxseg->SetBranchAddress("pmtbbcs", &pmtbbcs);
+	ntp_svxseg->SetBranchAddress("pmtbbcs", &pmtbbcs);
+	ntp_svxseg->SetBranchAddress("chisq", &chisq);
+	ntp_svxseg->SetBranchAddress("ndf", &ndf);
+
+	for (int i = 0; i < ntp_svxseg->GetEntries(); i++)
+	{
+		ntp_svxseg->GetEntry(i);
+
+		float phi = TMath::ATan2(mom[1], mom[0]);
+		float eta = TMath::ATanH(mom[2] / TMath::Sqrt(mom[0] * mom[0] + mom[1] * mom[1] + mom[2] * mom[2]));
+
+		if (!(nhits[0] >= 1 && nhits[1] >= 1 && nhits[2] >= 1 && nhits[3] >= 1) || TMath::Abs(vtx_bbc[2]) > 1 || TMath::Abs(dca) > 0.15 || TMath::Abs(dca2d) > 0.05 || chisq / ndf > 3 || TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom[2] / TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) > 1.0 || pmtbbcn <= 0 || pmtbbcs <= 0)		{
+			continue;
+		}
+
+		if (phi > 1.5 * PI)
+		{
+			phi = phi - 2 * PI;
+		}
+		else if (phi < -0.5 * PI)
+		{
+			phi = phi + 2 * PI;
+		}
+
+		h_eta_phi->Fill(eta, phi);
+	}
+
+	h_eta_phi->Scale(1.0 / nevents);
+}
+
 void getAzimuthalDistribution()
 {
 	h_dPhi = new TH1F("h_dPhi", "h_dPhi", 400, -0.5 * PI, 1.5 * PI);
@@ -144,19 +212,23 @@ void getAzimuthalDistribution()
 	h_dPhi_highpT = new TH1F("h_dPhi_highpT", "h_dPhi_highpT", 400, -0.5 * PI, 1.5 * PI);
 
 	float mom[3];
-	float vtx[3];
+	float vtx_bbc[3];
 	int nhits[4];
 	float chisq;
 	float ndf;
 	float dca;
 	float dca2d;
+	int pmtbbcn;
+	int pmtbbcs;
 	ntp_svxseg->SetBranchAddress("mom", &mom);
-	ntp_svxseg->SetBranchAddress("vtx", &vtx);
+	ntp_svxseg->SetBranchAddress("vtx_bbc", &vtx_bbc);
 	ntp_svxseg->SetBranchAddress("nhits", &nhits);
 	ntp_svxseg->SetBranchAddress("chisq", &chisq);
 	ntp_svxseg->SetBranchAddress("ndf", &ndf);
 	ntp_svxseg->SetBranchAddress("dca", &dca);
 	ntp_svxseg->SetBranchAddress("dca2d", &dca2d);
+	ntp_svxseg->SetBranchAddress("pmtbbcs", &pmtbbcs);
+	ntp_svxseg->SetBranchAddress("pmtbbcn", &pmtbbcn);
 
 	for (int i = 0; i < ntp_svxseg->GetEntries(); i++)
 	{
@@ -164,7 +236,7 @@ void getAzimuthalDistribution()
 
 		float phi = TMath::ATan2(mom[1], mom[0]);
 
-		if ((nhits[0] + nhits[1] + nhits[2] + nhits[3] != 4) || TMath::Abs(vtx[2]) > 1 || TMath::Abs(dca) > 0.15 || TMath::Abs(dca2d) > 0.05 || chisq/ndf > 3 || TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) > 0.35)
+		if (!(nhits[0] >= 1 && nhits[1] >= 1 && nhits[2] >= 1 && nhits[3] >= 1) || TMath::Abs(vtx_bbc[2]) > 1 || TMath::Abs(dca) > 0.15 || TMath::Abs(dca2d) > 0.05 || chisq / ndf > 3 || TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) < 0.2 || TMath::Abs(TMath::ATanH(mom[2] / TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))) > 1.0 || pmtbbcn <= 0 || pmtbbcs <= 0)
 		{
 			continue;
 		}
@@ -180,11 +252,11 @@ void getAzimuthalDistribution()
 
 		h_dPhi->Fill(phi);
 
-		if(TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) < 0.75)
+		if (TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) < 0.75)
 		{
 			h_dPhi_lowpT->Fill(phi);
 		}
-		else if(TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 0.75)
+		else if (TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1]) > 0.75)
 		{
 			h_dPhi_highpT->Fill(phi);
 		}
@@ -205,35 +277,35 @@ void getAzimuthalDistribution()
 
 void getEtaDistribution()
 {
-	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp1(200,-1.5,1.5)", (zvtxcut + "&&" + etcut + "&&" + nhitscut + "&&" + dca2dcut + "&&" + dcacut  + "&&" + chisqcut + "&&" + momcut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp1(200,-1.5,1.5)", (zvtxcut + "&&" + etcut + "&&" + nhitscut + "&&" + dca2dcut + "&&" + dcacut  + "&&" + chisqcut + "&&" + momcut + "&&" + etacutWide + "&&" + bbccut).c_str(), "goff");
 	h_dNdEta_ET = (TH1F*) gDirectory->FindObject("htmp1");
 	h_dNdEta_ET->Scale(1.0 / nevents);
 
-	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp2(200,-1.5,1.5)", (zvtxcut + "&&" + ebcut + "&&" + nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp2(200,-1.5,1.5)", (zvtxcut + "&&" + ebcut + "&&" + nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacutWide + "&&" + bbccut).c_str(), "goff");
 	h_dNdEta_EB = (TH1F*) gDirectory->FindObject("htmp2");
 	h_dNdEta_EB->Scale(1.0 / nevents);
 
-	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp3(200,-1.5,1.5)", (zvtxcut + "&&" + wtcut + "&&" + nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp3(200,-1.5,1.5)", (zvtxcut + "&&" + wtcut + "&&" + nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacutWide + "&&" + bbccut).c_str(), "goff");
 	h_dNdEta_WT = (TH1F*) gDirectory->FindObject("htmp3");
 	h_dNdEta_WT->Scale(1.0 / nevents);
 
-	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp4(200,-1.5,1.5)", (zvtxcut + "&&" + wbcut + "&&" + nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp4(200,-1.5,1.5)", (zvtxcut + "&&" + wbcut + "&&" + nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacutWide + "&&" + bbccut).c_str(), "goff");
 	h_dNdEta_WB = (TH1F*) gDirectory->FindObject("htmp4");
 	h_dNdEta_WB->Scale(1.0 / nevents);
 
-	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp5(200,-1.5,1.5)", (zvtxcut + "&&" + nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp5(200,-1.5,1.5)", (zvtxcut + "&&" + nhitscut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacutWide + "&&" + bbccut).c_str(), "goff");
 	h_dNdEta = (TH1F*) gDirectory->FindObject("htmp5");
 	h_dNdEta->Scale(1.0 / nevents);
 
-	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp6(200,-1.5,1.5)", (zvtxcut + "&&" + nhitscut + "&&" + lopTcut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp6(200,-1.5,1.5)", (zvtxcut + "&&" + nhitscut + "&&" + lopTcut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacutWide + "&&" + bbccut).c_str(), "goff");
 	h_dNdEta_lowpT = (TH1F*) gDirectory->FindObject("htmp6");
 	h_dNdEta_lowpT->Scale(1.0 / nevents);
 
-	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp7(200,-1.5,1.5)", (zvtxcut + "&&" + nhitscut + "&&" + midpTcut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp7(200,-1.5,1.5)", (zvtxcut + "&&" + nhitscut + "&&" + midpTcut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacutWide + "&&" + bbccut).c_str(), "goff");
 	h_dNdEta_midpT = (TH1F*) gDirectory->FindObject("htmp7");
 	h_dNdEta_midpT->Scale(1.0 / nevents);
 
-	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp8(200,-1.5,1.5)", (zvtxcut + "&&" + nhitscut + "&&" + hipTcut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacut).c_str(), "goff");
+	ntp_svxseg->Draw("TMath::ATanH(mom[2]/TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1] + mom[2]*mom[2]))>>htmp8(200,-1.5,1.5)", (zvtxcut + "&&" + nhitscut + "&&" + hipTcut + "&&" + dca2dcut + "&&" + dcacut + "&&" + chisqcut + "&&" + momcut + "&&" + etacutWide + "&&" + bbccut).c_str(), "goff");
 	h_dNdEta_highpT = (TH1F*) gDirectory->FindObject("htmp8");
 	h_dNdEta_highpT->Scale(1.0 / nevents);
 
@@ -372,7 +444,10 @@ void plotClusters()
 	{
 		ntp_cluster->GetEntry(i);
 
-		if(TMath::Abs(vtx[2]) > 1) continue;
+		if (TMath::Abs(vtx[2]) > 1 && (DATA == 2 || DATA == 3))
+		{
+			continue;
+		}
 
 		float phi = TMath::ATan2(cy, cx);
 
@@ -404,7 +479,7 @@ void plotClusters()
 			h_phi_clusters_B2->Fill(phi);
 			h_zed_clusters_B2->Fill(cz);
 		}
-		else if(layer == 3)
+		else if (layer == 3)
 		{
 			h_phi_clusters_B3->Fill(phi);
 			h_zed_clusters_B3->Fill(cz);
@@ -509,7 +584,20 @@ void plotClusters()
 void PlotTrackVariables()
 {
 	//Read file
-	TFile *fin  = new TFile("Data/423844_ana_newmat_1.root");
+	TFile *fin;
+	if (DATA == 1)
+	{
+		fin  = new TFile("Data/423844_reco_clock.root");
+	}
+	else if (DATA == 2)
+	{
+		fin  = new TFile("Data/423844_data_0_1_050216.root");
+	}
+	else if (DATA == 3)
+	{
+		fin  = new TFile("Data/423844_reco_1_0_1_0_050416.root");
+	}
+
 	ntp_svxseg  = (TTree*) fin->Get("ntp_svxseg");
 	ntp_event   = (TTree*) fin->Get("ntp_event");
 	ntp_cluster = (TTree*) fin->Get("ntp_cluster");
@@ -520,10 +608,24 @@ void PlotTrackVariables()
 	plotVariables();
 	getAzimuthalDistribution();
 	getEtaDistribution();
+	getEtaPhiDistribution();
 	plotClusters();
 
 	//Write histograms to file
-	TFile *fout = new TFile("WorkingFiles/simsTrackVariables_newmat_1.root", "RECREATE");
+	TFile *fout;
+	if (DATA == 1)
+	{
+		fout = new TFile("WorkingFiles/trackvars_clock_def_temp.root", "RECREATE");
+	}
+	else if (DATA == 2)
+	{
+		fout = new TFile("WorkingFiles/trackvars_data_def_temp.root", "RECREATE");
+	}
+	else if (DATA == 3)
+	{
+		fout = new TFile("WorkingFiles/trackvars_sims_def_temp.root", "RECREATE");
+	}
+
 	h_dNdEta_WT->Write();
 	h_dNdEta_WB->Write();
 	h_dNdEta_ET->Write();
@@ -550,4 +652,5 @@ void PlotTrackVariables()
 	h_zed_clusters_B1->Write();
 	h_zed_clusters_B2->Write();
 	h_zed_clusters_B3->Write();
+	h_eta_phi->Write();
 }
