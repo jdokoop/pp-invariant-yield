@@ -339,7 +339,7 @@ void plotInvariantYield()
 	gPad->SetTopMargin(0.01);
 	gPad->SetBottomMargin(0.2);
 
-	TCanvas *c3 = new TCanvas("c3", "Invariant Yield for Inclusive Azimuth", 600, 600);
+	TCanvas *c3 = new TCanvas("c3", "Invariant Yield for Inclusive Azimuth", 500, 600);
 	c3->Divide(1, 2, 0, 0);
 
 	c3->cd(1);
@@ -386,6 +386,250 @@ void plotInvariantYield()
 	gHadronsRatio->SetMarkerColor(kMagenta);
 	gHadronsRatio->Draw("P,same");
 	tlUnity->Draw("same");
+
+	TLine *tl40pct = new TLine(0.2, 0.6, 2.0, 0.6);
+	tl40pct->SetLineStyle(7);
+	tl40pct->Draw("same");
+}
+
+void plotInvariantYieldSectors()
+{
+	//-------------------
+	// EAST TOP
+	//-------------------
+	TCanvas *cET = new TCanvas("cET", "Invariant Yield for ET", 500, 600);
+	cET->Divide(1, 2, 0, 0);
+
+	cET->cd(1);
+	gPad->SetTicky();
+	gPad->SetTickx();
+	gPad->SetLogy();
+	gPad->SetTopMargin(0.05);
+	gPad->SetPad(.005, .3, .9, .92 );
+	g_dNdpT_data[1]->SetTitle("");
+	g_dNdpT_data[1]->Draw("AP");
+	g_dNdpT_data[1]->GetXaxis()->SetRangeUser(0, 2);
+	g_dNdpT_data[1]->GetXaxis()->SetTitleFont(62);
+	g_dNdpT_data[1]->GetXaxis()->SetLabelFont(62);
+	g_dNdpT_data[1]->GetYaxis()->SetTitle("1/N_{evt} 1/2#pi p_{T} dN/dp_{T}d#eta");
+	g_dNdpT_data[1]->GetYaxis()->SetTitleFont(62);
+	g_dNdpT_data[1]->GetYaxis()->SetLabelFont(62);
+	gHadrons->SetMarkerStyle(28);
+	gHadrons->SetMarkerColor(kViolet);
+	gHadrons->Draw("P,same");
+	tsallisPublishedFit->Draw("same");
+	tsallisPublishedFit->SetLineWidth(1);
+	TLegend *tlegYield = new TLegend(0.2, 0.1, 0.55, 0.4);
+	tlegYield->SetLineColor(kWhite);
+	tlegYield->AddEntry(g_dNdpT_data[1],"ET","P");
+	tlegYield->AddEntry(gHadrons,"PPG030","P");
+	tlegYield->AddEntry(tsallisPublishedFit,"FIT TO PPG030","L");
+	tlegYield->Draw("same");
+
+	cET->cd(2);
+	gPad->SetTicky();
+	gPad->SetTickx();
+	gPad->SetPad(.005, .005, .9, .3);
+	gPad->SetBottomMargin(0.3);
+	tsallisSectorRatioPublished[1]->SetTitle("");
+	tsallisSectorRatioPublished[1]->Draw("AP");
+	tsallisSectorRatioPublished[1]->GetXaxis()->SetTitle("p_{T} [GeV/c]");
+	tsallisSectorRatioPublished[1]->GetXaxis()->SetRangeUser(0, 2);
+	tsallisSectorRatioPublished[1]->GetXaxis()->SetLabelSize(0.08);
+	tsallisSectorRatioPublished[1]->GetXaxis()->SetTitleSize(0.08);
+	tsallisSectorRatioPublished[1]->GetXaxis()->SetLabelFont(62);
+	tsallisSectorRatioPublished[1]->GetXaxis()->SetTitleFont(62);
+	tsallisSectorRatioPublished[1]->GetYaxis()->SetTitle("Points/ Fit to Published");
+	tsallisSectorRatioPublished[1]->GetYaxis()->SetRangeUser(0.4, 1.4);
+	tsallisSectorRatioPublished[1]->GetYaxis()->SetLabelSize(0.08);
+	tsallisSectorRatioPublished[1]->GetYaxis()->SetTitleSize(0.08);
+	tsallisSectorRatioPublished[1]->GetYaxis()->SetTitleOffset(0.5);
+	tsallisSectorRatioPublished[1]->GetYaxis()->SetLabelFont(62);
+	tsallisSectorRatioPublished[1]->GetYaxis()->SetTitleFont(62);
+	gHadronsRatio->SetMarkerStyle(28);
+	gHadronsRatio->SetMarkerColor(kMagenta);
+	gHadronsRatio->Draw("P,same");
+
+	TLine *tlUnity = new TLine(0.2, 1.0, 2.0, 1.0);
+	tlUnity->SetLineStyle(7);
+	tlUnity->Draw("same");
+	tlUnity->Draw("same");
+
+	TLine *tl40pct = new TLine(0.2, 0.6, 2.0, 0.6);
+	tl40pct->SetLineStyle(7);
+	tl40pct->Draw("same");
+
+	//-------------------
+	// EAST BOTTOM
+	//-------------------
+	TCanvas *cEB = new TCanvas("cEB", "Invariant Yield for EB", 500, 600);
+	cEB->Divide(1, 2, 0, 0);
+
+	cEB->cd(1);
+	gPad->SetTicky();
+	gPad->SetTickx();
+	gPad->SetLogy();
+	gPad->SetTopMargin(0.05);
+	gPad->SetPad(.005, .3, .9, .92 );
+	g_dNdpT_data[2]->SetTitle("");
+	g_dNdpT_data[2]->Draw("AP");
+	g_dNdpT_data[2]->GetXaxis()->SetRangeUser(0, 2);
+	g_dNdpT_data[2]->GetXaxis()->SetTitleFont(62);
+	g_dNdpT_data[2]->GetXaxis()->SetLabelFont(62);
+	g_dNdpT_data[2]->GetYaxis()->SetTitle("1/N_{evt} 1/2#pi p_{T} dN/dp_{T}d#eta");
+	g_dNdpT_data[2]->GetYaxis()->SetTitleFont(62);
+	g_dNdpT_data[2]->GetYaxis()->SetLabelFont(62);
+	gHadrons->SetMarkerStyle(28);
+	gHadrons->SetMarkerColor(kViolet);
+	gHadrons->Draw("P,same");
+	tsallisPublishedFit->Draw("same");
+	tsallisPublishedFit->SetLineWidth(1);
+	TLegend *tlegYieldEB = new TLegend(0.2, 0.1, 0.55, 0.4);
+	tlegYieldEB->SetLineColor(kWhite);
+	tlegYieldEB->AddEntry(g_dNdpT_data[2],"EB","P");
+	tlegYieldEB->AddEntry(gHadrons,"PPG030","P");
+	tlegYieldEB->AddEntry(tsallisPublishedFit,"FIT TO PPG030","L");
+	tlegYieldEB->Draw("same");
+
+	cEB->cd(2);
+	gPad->SetTicky();
+	gPad->SetTickx();
+	gPad->SetPad(.005, .005, .9, .3);
+	gPad->SetBottomMargin(0.3);
+	tsallisSectorRatioPublished[2]->SetTitle("");
+	tsallisSectorRatioPublished[2]->Draw("AP");
+	tsallisSectorRatioPublished[2]->GetXaxis()->SetTitle("p_{T} [GeV/c]");
+	tsallisSectorRatioPublished[2]->GetXaxis()->SetRangeUser(0, 2);
+	tsallisSectorRatioPublished[2]->GetXaxis()->SetLabelSize(0.08);
+	tsallisSectorRatioPublished[2]->GetXaxis()->SetTitleSize(0.08);
+	tsallisSectorRatioPublished[2]->GetXaxis()->SetLabelFont(62);
+	tsallisSectorRatioPublished[2]->GetXaxis()->SetTitleFont(62);
+	tsallisSectorRatioPublished[2]->GetYaxis()->SetTitle("Points/ Fit to Published");
+	tsallisSectorRatioPublished[2]->GetYaxis()->SetRangeUser(0.4, 1.4);
+	tsallisSectorRatioPublished[2]->GetYaxis()->SetLabelSize(0.08);
+	tsallisSectorRatioPublished[2]->GetYaxis()->SetTitleSize(0.08);
+	tsallisSectorRatioPublished[2]->GetYaxis()->SetTitleOffset(0.5);
+	tsallisSectorRatioPublished[2]->GetYaxis()->SetLabelFont(62);
+	tsallisSectorRatioPublished[2]->GetYaxis()->SetTitleFont(62);
+	gHadronsRatio->SetMarkerStyle(28);
+	gHadronsRatio->SetMarkerColor(kMagenta);
+	gHadronsRatio->Draw("P,same");
+	tlUnity->Draw("same");
+	tl40pct->Draw("same");
+
+	//-------------------
+	// WEST TOP
+	//-------------------
+	TCanvas *cWT = new TCanvas("cWT", "Invariant Yield for WT", 500, 600);
+	cWT->Divide(1, 2, 0, 0);
+
+	cWT->cd(1);
+	gPad->SetTicky();
+	gPad->SetTickx();
+	gPad->SetLogy();
+	gPad->SetTopMargin(0.05);
+	gPad->SetPad(.005, .3, .9, .92 );
+	g_dNdpT_data[3]->SetTitle("");
+	g_dNdpT_data[3]->Draw("AP");
+	g_dNdpT_data[3]->GetXaxis()->SetRangeUser(0, 2);
+	g_dNdpT_data[3]->GetXaxis()->SetTitleFont(62);
+	g_dNdpT_data[3]->GetXaxis()->SetLabelFont(62);
+	g_dNdpT_data[3]->GetYaxis()->SetTitle("1/N_{evt} 1/2#pi p_{T} dN/dp_{T}d#eta");
+	g_dNdpT_data[3]->GetYaxis()->SetTitleFont(62);
+	g_dNdpT_data[3]->GetYaxis()->SetLabelFont(62);	gHadrons->SetMarkerStyle(28);
+	gHadrons->SetMarkerColor(kViolet);
+	gHadrons->Draw("P,same");
+	tsallisPublishedFit->Draw("same");
+	tsallisPublishedFit->SetLineWidth(1);
+	TLegend *tlegYieldWT = new TLegend(0.2, 0.1, 0.55, 0.4);
+	tlegYieldWT->SetLineColor(kWhite);
+	tlegYieldWT->AddEntry(g_dNdpT_data[3],"WT","P");
+	tlegYieldWT->AddEntry(gHadrons,"PPG030","P");
+	tlegYieldWT->AddEntry(tsallisPublishedFit,"FIT TO PPG030","L");
+	tlegYieldWT->Draw("same");
+
+	cWT->cd(2);
+	gPad->SetTicky();
+	gPad->SetTickx();
+	gPad->SetPad(.005, .005, .9, .3);
+	gPad->SetBottomMargin(0.3);
+	tsallisSectorRatioPublished[3]->SetTitle("");
+	tsallisSectorRatioPublished[3]->Draw("AP");
+	tsallisSectorRatioPublished[3]->GetXaxis()->SetTitle("p_{T} [GeV/c]");
+	tsallisSectorRatioPublished[3]->GetXaxis()->SetRangeUser(0, 2);
+	tsallisSectorRatioPublished[3]->GetXaxis()->SetLabelSize(0.08);
+	tsallisSectorRatioPublished[3]->GetXaxis()->SetTitleSize(0.08);
+	tsallisSectorRatioPublished[3]->GetXaxis()->SetLabelFont(62);
+	tsallisSectorRatioPublished[3]->GetXaxis()->SetTitleFont(62);
+	tsallisSectorRatioPublished[3]->GetYaxis()->SetTitle("Points/ Fit to Published");
+	tsallisSectorRatioPublished[3]->GetYaxis()->SetRangeUser(0.4, 1.4);
+	tsallisSectorRatioPublished[3]->GetYaxis()->SetLabelSize(0.08);
+	tsallisSectorRatioPublished[3]->GetYaxis()->SetTitleSize(0.08);
+	tsallisSectorRatioPublished[3]->GetYaxis()->SetTitleOffset(0.5);
+	tsallisSectorRatioPublished[3]->GetYaxis()->SetLabelFont(62);
+	tsallisSectorRatioPublished[3]->GetYaxis()->SetTitleFont(62);
+	gHadronsRatio->SetMarkerStyle(28);
+	gHadronsRatio->SetMarkerColor(kMagenta);
+	gHadronsRatio->Draw("P,same");
+	tlUnity->Draw("same");
+	tl40pct->Draw("same");
+
+	//-------------------
+	// WEST BOTTOM
+	//-------------------
+	TCanvas *cWB = new TCanvas("cWB", "Invariant Yield for WB", 500, 600);
+	cWB->Divide(1, 2, 0, 0);
+
+	cWB->cd(1);
+	gPad->SetTicky();
+	gPad->SetTickx();
+	gPad->SetLogy();
+	gPad->SetTopMargin(0.05);
+	gPad->SetPad(.005, .3, .9, .92 );
+	g_dNdpT_data[4]->SetTitle("");
+	g_dNdpT_data[4]->Draw("AP");
+	g_dNdpT_data[4]->GetXaxis()->SetRangeUser(0, 2);
+	g_dNdpT_data[4]->GetXaxis()->SetTitleFont(62);
+	g_dNdpT_data[4]->GetXaxis()->SetLabelFont(62);
+	g_dNdpT_data[4]->GetYaxis()->SetTitle("1/N_{evt} 1/2#pi p_{T} dN/dp_{T}d#eta");
+	g_dNdpT_data[4]->GetYaxis()->SetTitleFont(62);
+	g_dNdpT_data[4]->GetYaxis()->SetLabelFont(62);	gHadrons->SetMarkerStyle(28);
+	gHadrons->SetMarkerColor(kViolet);
+	gHadrons->Draw("P,same");
+	tsallisPublishedFit->Draw("same");
+	tsallisPublishedFit->SetLineWidth(1);
+	TLegend *tlegYieldWB = new TLegend(0.2, 0.1, 0.55, 0.4);
+	tlegYieldWB->SetLineColor(kWhite);
+	tlegYieldWB->AddEntry(g_dNdpT_data[4],"WB","P");
+	tlegYieldWB->AddEntry(gHadrons,"PPG030","P");
+	tlegYieldWB->AddEntry(tsallisPublishedFit,"FIT TO PPG030","L");
+	tlegYieldWB->Draw("same");
+
+	cWB->cd(2);
+	gPad->SetTicky();
+	gPad->SetTickx();
+	gPad->SetPad(.005, .005, .9, .3);
+	gPad->SetBottomMargin(0.3);
+	tsallisSectorRatioPublished[4]->SetTitle("");
+	tsallisSectorRatioPublished[4]->Draw("AP");
+	tsallisSectorRatioPublished[4]->GetXaxis()->SetTitle("p_{T} [GeV/c]");
+	tsallisSectorRatioPublished[4]->GetXaxis()->SetRangeUser(0, 2);
+	tsallisSectorRatioPublished[4]->GetXaxis()->SetLabelSize(0.08);
+	tsallisSectorRatioPublished[4]->GetXaxis()->SetTitleSize(0.08);
+	tsallisSectorRatioPublished[4]->GetXaxis()->SetLabelFont(62);
+	tsallisSectorRatioPublished[4]->GetXaxis()->SetTitleFont(62);
+	tsallisSectorRatioPublished[4]->GetYaxis()->SetTitle("Points/ Fit to Published");
+	tsallisSectorRatioPublished[4]->GetYaxis()->SetRangeUser(0.4, 1.4);
+	tsallisSectorRatioPublished[4]->GetYaxis()->SetLabelSize(0.08);
+	tsallisSectorRatioPublished[4]->GetYaxis()->SetTitleSize(0.08);
+	tsallisSectorRatioPublished[4]->GetYaxis()->SetTitleOffset(0.5);
+	tsallisSectorRatioPublished[4]->GetYaxis()->SetLabelFont(62);
+	tsallisSectorRatioPublished[4]->GetYaxis()->SetTitleFont(62);
+	gHadronsRatio->SetMarkerStyle(28);
+	gHadronsRatio->SetMarkerColor(kMagenta);
+	gHadronsRatio->Draw("P,same");
+	tlUnity->Draw("same");
+	tl40pct->Draw("same");
 }
 
 void convertCorrectionToGraph()
@@ -503,5 +747,6 @@ void ComputeInvariantYield()
 	convertYieldToGraph();
 	plotTruthReco();
 	plotInvariantYield();
+	plotInvariantYieldSectors();
 	plotEfficiencyCorrection();
 }
