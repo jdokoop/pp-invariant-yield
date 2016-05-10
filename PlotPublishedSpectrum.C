@@ -4,6 +4,7 @@
 //-----------------------------------
 
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -35,6 +36,8 @@ float ex_k[13];
 float ey_k[13];
 
 int totalParticles = 0;
+
+vector<TBox*> pion_systematics;
 
 //-----------------------------------
 // Functions
@@ -93,6 +96,9 @@ void createPionSpectrum()
 	x_minus[16] = 2.4; y_minus[16] = 0.0070146; ex_minus[16] = 0; ey_minus[16] = 0.000479789;
 	x_minus[17] = 2.6; y_minus[17] = 0.00425537; ex_minus[17] = 0; ey_minus[17] = 0.000408;
 
+	//Systematics
+	float esys_pi[18] = {0.156016, 0.156016, 0.156016, 0.156016, 0.156016, 0.156016, 0.156016, 0.156016, 0.156016, 0.156016, 0.156016, 0.156016, 0.153756, 0.153756, 0.164913, 0.180853, 0.200503, 0.222883};
+
 	//Divide by 42 to get (1/2pi)(1/pT)dN/dpTdy
 	for (int i = 0; i < 18; i++)
 	{
@@ -100,9 +106,14 @@ void createPionSpectrum()
 		y_pi[i] = (y_minus[i] + y_plus[i]) / 42.0;
 
 		ex_pi[i] = ex_minus[i];
-		ey_pi[i] = TMath::Sqrt(ey_minus[i] * ey_minus[i] + ey_plus[i] * ey_plus[i]);
+		ey_pi[i] = 0;//TMath::Sqrt(ey_minus[i] * ey_minus[i] + ey_plus[i] * ey_plus[i]);
 
 		totalParticles += (y_pi[i] * 2 * TMath::Pi() * x_pi[i]);
+
+		TBox *box = new TBox(x_pi[i] - 0.025, y_pi[i] - esys_pi[i]*y_pi[i], x_pi[i] + 0.025, y_pi[i] + esys_pi[i]*y_pi[i]);
+		box->SetLineColor(kGreen + 3);
+		box->SetFillColorAlpha(kWhite, 0.0);
+		pion_systematics.push_back(box);
 	}
 
 	g_pi = new TGraphErrors(18, x_pi, y_pi, ex_pi, ey_pi);
@@ -226,7 +237,7 @@ void createKaonSpectrum()
 		ex_k[i] = ex_minus[i];
 		ey_k[i] = TMath::Sqrt(ey_minus[i] * ey_minus[i] + ey_plus[i] * ey_plus[i]);
 
-		totalParticles += (y_k[i] * 2*TMath::Pi() * x_k[i]);
+		totalParticles += (y_k[i] * 2 * TMath::Pi() * x_k[i]);
 	}
 
 	g_k = new TGraphErrors(13, x_k, y_k, ex_k, ey_k);
@@ -242,7 +253,7 @@ void createHadronSpectrum()
 
 	for (int i = 0; i < 12; i++)
 	{
-		x[i]  = x_pi[i+3];
+		x[i]  = x_pi[i + 3];
 		y[i]  = y_pi[i + 3] + y_p[i] + y_k[i + 2];
 		ex[i] = ex_pi[i];
 		ey[i] = TMath::Sqrt(ex_pi[i] * ex_pi[i] + ex_p[i] * ex_p[i] + ex_k[i] * ex_k[i]);
@@ -260,8 +271,8 @@ void plotHadronComparison()
 	ntp_ampt->Draw("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h(100,0,2)", "TMath::Abs(y) < 0.5", "goff");
 	h_ampt_pt = (TH1F*) gDirectory->FindObject("h");
 
-	h_ampt_pt->Scale(1.0 / 447000);            //Number of events
-	h_ampt_pt->Scale(1.0 / 0.02);              //Bin width 
+	h_ampt_pt->Scale(1.0 / 2000000);            //Number of events
+	h_ampt_pt->Scale(1.0 / 0.02);              //Bin width
 	h_ampt_pt->Scale(1.0 / (2 * TMath::Pi())); //2Pi factor
 
 	for (int i = 1; i <= h_ampt_pt->GetNbinsX(); i++)
@@ -275,14 +286,14 @@ void plotHadronComparison()
 	}
 
 	gStyle->SetOptStat(0);
-	TCanvas *c = new TCanvas("c","c",600,600);
+	TCanvas *c = new TCanvas("c", "c", 600, 600);
 
-	g_hadrons->SetLineColor(kOrange+3);
+	g_hadrons->SetLineColor(kOrange + 3);
 	g_hadrons->SetLineWidth(4);
 	g_hadrons->SetMarkerStyle(20);
 	h_ampt_pt->Draw();
 	g_hadrons->Draw("CP,same");
-	h_ampt_pt->SetMarkerStyle(5);
+	h_ampt_pt->SetMarkerStyle(20);
 	h_ampt_pt->SetMarkerColor(kBlue);
 	h_ampt_pt->SetMarkerSize(0.6);
 	h_ampt_pt->SetTitle("");
@@ -297,14 +308,14 @@ void plotHadronComparison()
 void plotPionComparison()
 {
 	TH1F *h_ampt_pt;
-	TFile *f_ampt = new TFile("Data/ampt_pp_true.root");
+	TFile *f_ampt = new TFile("Data/ampt_pp_true_1.root");
 	TTree *ntp_ampt = (TTree*) f_ampt->Get("ntp_svxseg_true");
 
 	ntp_ampt->Draw("TMath::Sqrt(mom[0]*mom[0] + mom[1]*mom[1])>>h(100,0,2)", "TMath::Abs(y) < 0.5 && species == 211", "goff");
 	h_ampt_pt = (TH1F*) gDirectory->FindObject("h");
 
-	h_ampt_pt->Scale(1.0 / 450000);            //Number of events
-	h_ampt_pt->Scale(1.0 / 0.02);              //Bin width 
+	h_ampt_pt->Scale(1.0 / 2000000);            //Number of events
+	h_ampt_pt->Scale(1.0 / 0.02);              //Bin width
 	h_ampt_pt->Scale(1.0 / (2 * TMath::Pi())); //2Pi factor
 
 	for (int i = 1; i <= h_ampt_pt->GetNbinsX(); i++)
@@ -318,9 +329,9 @@ void plotPionComparison()
 	}
 
 	gStyle->SetOptStat(0);
-	TCanvas *cPions = new TCanvas("cPions","cPions",600,600);
+	TCanvas *cPions = new TCanvas("cPions", "cPions", 600, 600);
 
-	h_ampt_pt->SetMarkerStyle(5);
+	h_ampt_pt->SetMarkerStyle(20);
 	h_ampt_pt->SetMarkerColor(kBlue);
 	h_ampt_pt->SetMarkerSize(0.6);
 	h_ampt_pt->SetTitle("");
@@ -338,14 +349,36 @@ void plotPionComparison()
 
 	//Fit with Tsallis functional form
 	float m = 0.140;
-	TF1 *myfit = new TF1("myfit","[0]*(([1]-1)*([1]-1))/(([1]*[2] + 0.140*([1] - 1))*([1]*[2] + 0.140)) * pow(([1]*[2] + TMath::Sqrt(0.140*0.140 + x*x))/([1]*[2]+0.140),-1*[1])", 0, 1.9);
-	myfit->SetParameter(0,1.28);
-	myfit->SetParameter(1,9.67);
-	myfit->SetParameter(2,121.077);
-	g_pi->Fit("myfit","R");
+	TF1 *myfit = new TF1("myfit", "[0]*(([1]-1)*([1]-1))/(([1]*[2] + 0.140*([1] - 1))*([1]*[2] + 0.140)) * pow(([1]*[2] + TMath::Sqrt(0.140*0.140 + x*x))/([1]*[2]+0.140),-1*[1])", 0, 1.9);
+	myfit->SetParameter(0, 1.28);
+	myfit->SetParameter(1, 9.67);
+	myfit->SetParameter(2, 121.077);
+	//g_pi->Fit("myfit","R");
 
 	h_ampt_pt->Draw("P");
 	g_pi->Draw("CP,same");
+
+	//Plot systematics
+	for (int i = 0; i < 18; i++)
+	{
+		TBox *b = (TBox*) pion_systematics[i];
+		b->Draw("same,l");
+	}
+
+	TLegend *tleg = new TLegend(0.55, 0.7, 0.85, 0.8);
+	tleg->AddEntry(g_pi, "PPG030", "P");
+	tleg->AddEntry(h_ampt_pt, "AMPT", "P");
+	tleg->SetLineColor(kWhite);
+	tleg->Draw("same");
+
+	TLatex *tl1_1 = new TLatex(0.15, 0.4, "p+p at 200 GeV");
+	tl1_1->SetNDC(kTRUE);
+	tl1_1->Draw("same");
+
+	TLatex *tl1_2 = new TLatex(0.15, 0.3, "Charged Pions");
+	tl1_2->SetNDC(kTRUE);
+	tl1_2->Draw("same");
+
 }
 
 void PlotPublishedSpectrum()
