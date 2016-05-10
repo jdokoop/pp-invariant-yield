@@ -1,5 +1,12 @@
 #include <iostream>
 
+#include "TCanvas.h"
+#include "TH1.h"
+#include "TH2.h"
+#include "TF1.h"
+#include "TGraph.h"
+#include "TGraphErrors.h"
+
 using namespace std;
 
 //---------------------------------------
@@ -20,28 +27,8 @@ TGraphErrors *g_dNdpT_data[NSECT];
 TH1F *h_correction[NSECT];
 TGraphErrors *g_correction[NSECT];
 
-//Azimuthal track distribution
-TH1F *h_phi_data[NSECT];
-TH1F *h_phi_reco[NSECT];
-TH2F *h_eta_phi_data;
-TH2F *h_eta_phi_reco;
-
-//Eta distributions for odd phi regions
-TH1F *h_eta_regions_data[4];
-TH1F *h_eta_regions_reco[4];
-
-//Pseudorapidity distributions for |zprec| < 1
-TH1F *h_eta_preccut_data;
-TH1F *h_eta_preccut_reco;
-
-//Chisd distributions
-TH1F *h_chisqndf_data[NSECT];
-
 //Label for each azimuthal sector
 string sectorLabel[NSECT] = {"INCLUSIVE", "ET", "EB", "WT", "WB"};
-
-//Label for selected phi regions (2 good, 2 bad)
-string phiLabel[4] = {"2.4 < #phi < 3.1", "-0.2 < #phi < 0.2", "0.65 < #phi < 0.85", "-0.75 < #phi < -0.6"};
 
 //Colors for plotting yields
 int yieldColor[NSECT] = {kBlack, kOrange + 1, kBlue, kRed, kGreen + 3};
@@ -57,6 +44,7 @@ TF1 *tsallisPublishedFit;
 
 //Ratio of Tsallis fits to spectrum in each sector
 TGraphErrors *tsallisSectorRatio[5];
+TGraphErrors *tsallisSectorRatioPublished[5];
 
 //Published charged hadron yield from PPG030
 TGraphErrors *gHadrons;
@@ -69,7 +57,7 @@ TGraphErrors *gHadronsRatio;
 
 void readFiles()
 {
-	TFile *fin = new TFile("WorkingFiles/normSpectra_1_0_1_0_v_0_1.root");
+	TFile *fin = new TFile("WorkingFiles/normSpectra_temp.root");
 
 	for (int i = 0; i < NSECT; i++)
 	{
@@ -78,36 +66,7 @@ void readFiles()
 		h_dNdpT_data[i] = (TH1F*) fin->Get(Form("h_dNdpT_data_%s", sectorLabel[i].c_str()));
 
 		h_correction[i] = (TH1F*) fin->Get(Form("h_correction_%s", sectorLabel[i].c_str()));
-
-		h_chisqndf_data[i] = (TH1F*) fin->Get(Form("h_chisqndf_data_%s", sectorLabel[i].c_str()));
 	}
-
-	h_eta_phi_data = (TH2F*) fin->Get("h_eta_phi_data");
-	h_eta_phi_reco = (TH2F*) fin->Get("h_eta_phi_sims");
-
-	h_eta_phi_data->Scale(1.0 / h_eta_phi_data->Integral());
-	h_eta_phi_reco->Scale(1.0 / h_eta_phi_reco->Integral());
-
-	h_phi_data[0] = (TH1F*) h_eta_phi_data->ProjectionY("h_phi_data_inclusive");
-	h_phi_reco[0] = (TH1F*) h_eta_phi_reco->ProjectionY("h_phi_reco_inclusive");
-
-	h_eta_preccut_reco = (TH1F*) fin->Get("h_eta_preccut_reco");
-	h_eta_preccut_data = (TH1F*) fin->Get("h_eta_preccut_data");
-
-	h_eta_preccut_reco->Scale(1.0/h_eta_preccut_reco->Integral());
-	h_eta_preccut_data->Scale(1.0/h_eta_preccut_data->Integral());
-
-	//Create 1D eta histograms from 2D eta v. phi
-	h_eta_regions_data[0] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi1", h_eta_phi_data->GetYaxis()->FindBin(2.4), h_eta_phi_data->GetYaxis()->FindBin(3.1));
-	h_eta_regions_data[1] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi2", h_eta_phi_data->GetYaxis()->FindBin(-0.2), h_eta_phi_data->GetYaxis()->FindBin(0.2));
-	h_eta_regions_data[2] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi3", h_eta_phi_data->GetYaxis()->FindBin(0.65), h_eta_phi_data->GetYaxis()->FindBin(0.85));
-	h_eta_regions_data[3] = (TH1F*) h_eta_phi_data->ProjectionX("h_eta_data_phi4", h_eta_phi_data->GetYaxis()->FindBin(-0.75), h_eta_phi_data->GetYaxis()->FindBin(-0.6));
-
-	h_eta_regions_reco[0] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi1", h_eta_phi_reco->GetYaxis()->FindBin(2.4), h_eta_phi_reco->GetYaxis()->FindBin(3.1));
-	h_eta_regions_reco[1] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi2", h_eta_phi_reco->GetYaxis()->FindBin(-0.2), h_eta_phi_reco->GetYaxis()->FindBin(0.2));
-	h_eta_regions_reco[2] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi3", h_eta_phi_reco->GetYaxis()->FindBin(0.65), h_eta_phi_reco->GetYaxis()->FindBin(0.85));
-	h_eta_regions_reco[3] = (TH1F*) h_eta_phi_reco->ProjectionX("h_eta_reco_phi4", h_eta_phi_reco->GetYaxis()->FindBin(-0.75), h_eta_phi_reco->GetYaxis()->FindBin(-0.6));
-
 
 	//Get hadron spectrum from PPG030
 	TFile *f_ppg = new TFile("Data/PPG030_hadron_spectrum.root");
@@ -135,7 +94,6 @@ void applyAcceptanceCorrection()
 
 void applyTriggerCorrection()
 {
-	//From PPG030, the correction is 1/(0.8 pm 0.02) = 1.25
 	for (int i = 0; i < NSECT; i++)
 	{
 		h_dNdpT_data[i]->Scale(0.55 / 0.79);
@@ -186,6 +144,11 @@ void divideFits()
 	double ex[9] = {0};
 	double ey[9] = {0};
 
+	double xpub[9];
+	double ypub[9];
+	double expub[9] = {0};
+	double eypub[9] = {0};
+
 	float epsilon = 0.01;
 
 	for (int j = 0; j < NSECT; j++)
@@ -196,12 +159,22 @@ void divideFits()
 
 			y[i] = (h_dNdpT_data[j]->GetBinContent(i + 1) / tsallisSectorFit[0]->Eval(x[i])) / 1.09;
 			ey[i] = h_dNdpT_data[j]->GetBinError(i + 1) / tsallisSectorFit[0]->Eval(x[i]);
+
+			xpub[i] = h_dNdpT_data[j]->GetBinCenter(i + 1) + offsetX[j] * epsilon;
+
+			ypub[i] = (h_dNdpT_data[j]->GetBinContent(i + 1) / tsallisPublishedFit->Eval(xpub[i])) / 1.09;
+			eypub[i] = h_dNdpT_data[j]->GetBinError(i + 1) / tsallisPublishedFit->Eval(xpub[i]);
 		}
 
 		tsallisSectorRatio[j] = new TGraphErrors(9, x, y, ex, ey);
 		tsallisSectorRatio[j]->SetLineColor(yieldColor[j]);
 		tsallisSectorRatio[j]->SetMarkerColor(yieldColor[j]);
 		tsallisSectorRatio[j]->SetMarkerStyle(20);
+
+		tsallisSectorRatioPublished[j] = new TGraphErrors(9, xpub, ypub, expub, eypub);
+		tsallisSectorRatioPublished[j]->SetLineColor(yieldColor[j]);
+		tsallisSectorRatioPublished[j]->SetMarkerColor(yieldColor[j]);
+		tsallisSectorRatioPublished[j]->SetMarkerStyle(20);
 	}
 
 	//Divide published spectrum by inclusive fit
@@ -258,6 +231,12 @@ void plotTruthReco()
 
 		h_dNdpT_truth[i]->Draw("P");
 		h_dNdpT_reco[i]->Draw("P,same");
+
+		TLegend *tlegTruthRecoYield = new TLegend(0.55, 0.7, 0.85, 0.8);
+		tlegTruthRecoYield->SetLineColor(kWhite);
+		tlegTruthRecoYield->AddEntry(h_dNdpT_truth[i], "AMPT Truth", "P");
+		tlegTruthRecoYield->AddEntry(h_dNdpT_reco[i], "AMPT Reco", "P");
+		if (i == 1) tlegTruthRecoYield->Draw("same");
 	}
 }
 
@@ -304,6 +283,19 @@ void plotInvariantYield()
 
 	tsallisSectorFit[0]->Draw("same");
 
+	TLegend *tlegSectorYield = new TLegend(0.15, 0.1, 0.5, 0.4);
+	tlegSectorYield->SetLineColor(kWhite);
+
+	for (int i = 0; i < NSECT; i++)
+	{
+		tlegSectorYield->AddEntry(g_dNdpT_data[i], sectorLabel[i].c_str(), "P");
+	}
+	tlegSectorYield->AddEntry(tsallisSectorFit[0], "FIT TO INCLUSIVE", "L");
+
+	tlegSectorYield->Draw("same");
+
+	gPad->SetTopMargin(0.05);
+
 	c1->cd(2);
 	gPad->SetPad(.005, .008, .9, .3);
 	gPad->SetTickx();
@@ -344,22 +336,52 @@ void plotInvariantYield()
 	tlUnity->SetLineStyle(7);
 	tlUnity->Draw("same");
 
+	gPad->SetTopMargin(0.01);
+	gPad->SetBottomMargin(0.2);
+
 	TCanvas *c3 = new TCanvas("c3", "Invariant Yield for Inclusive Azimuth", 600, 600);
 	c3->Divide(1, 2, 0, 0);
 
 	c3->cd(1);
+	gPad->SetTicky();
+	gPad->SetTickx();
 	gPad->SetLogy();
+	gPad->SetTopMargin(0.05);
 	gPad->SetPad(.005, .3, .9, .92 );
 	g_dNdpT_data[0]->Draw("AP");
+	g_dNdpT_data[0]->GetXaxis()->SetRangeUser(0, 2);
 	gHadrons->SetMarkerStyle(28);
 	gHadrons->SetMarkerColor(kViolet);
 	gHadrons->Draw("P,same");
 	tsallisPublishedFit->Draw("same");
 	tsallisPublishedFit->SetLineWidth(1);
+	TLegend *tlegYield = new TLegend(0.2, 0.1, 0.55, 0.4);
+	tlegYield->SetLineColor(kWhite);
+	tlegYield->AddEntry(g_dNdpT_data[0],"PHI INCLUSIVE","P");
+	tlegYield->AddEntry(gHadrons,"PPG030","P");
+	tlegYield->AddEntry(tsallisPublishedFit,"FIT TO PPG030","L");
+	tlegYield->Draw("same");
 
 	c3->cd(2);
+	gPad->SetTicky();
+	gPad->SetTickx();
 	gPad->SetPad(.005, .005, .9, .3);
-	tsallisSectorRatio[0]->Draw("AP,same");
+	gPad->SetBottomMargin(0.3);
+	tsallisSectorRatioPublished[0]->SetTitle("");
+	tsallisSectorRatioPublished[0]->Draw("AP");
+	tsallisSectorRatioPublished[0]->GetXaxis()->SetTitle("p_{T} [GeV/c]");
+	tsallisSectorRatioPublished[0]->GetXaxis()->SetRangeUser(0, 2);
+	tsallisSectorRatioPublished[0]->GetXaxis()->SetLabelSize(0.08);
+	tsallisSectorRatioPublished[0]->GetXaxis()->SetTitleSize(0.08);
+	tsallisSectorRatioPublished[0]->GetXaxis()->SetLabelFont(62);
+	tsallisSectorRatioPublished[0]->GetXaxis()->SetTitleFont(62);
+	tsallisSectorRatioPublished[0]->GetYaxis()->SetTitle("Points/ Fit to Published");
+	tsallisSectorRatioPublished[0]->GetYaxis()->SetRangeUser(0.4, 1.4);
+	tsallisSectorRatioPublished[0]->GetYaxis()->SetLabelSize(0.08);
+	tsallisSectorRatioPublished[0]->GetYaxis()->SetTitleSize(0.08);
+	tsallisSectorRatioPublished[0]->GetYaxis()->SetTitleOffset(0.5);
+	tsallisSectorRatioPublished[0]->GetYaxis()->SetLabelFont(62);
+	tsallisSectorRatioPublished[0]->GetYaxis()->SetTitleFont(62);
 	gHadronsRatio->SetMarkerStyle(28);
 	gHadronsRatio->SetMarkerColor(kMagenta);
 	gHadronsRatio->Draw("P,same");
@@ -416,6 +438,8 @@ void plotEfficiencyCorrection()
 {
 	TCanvas *cEff = new TCanvas("cEff", "cEff", 600, 600);
 
+	gPad->SetLeftMargin(0.15);
+
 	for (int i = 0; i < NSECT; i++)
 	{
 		g_correction[i]->SetLineColor(yieldColor[i]);
@@ -439,216 +463,23 @@ void plotEfficiencyCorrection()
 	g_correction[0]->GetYaxis()->SetTitleSize(0.04);
 	g_correction[0]->GetYaxis()->SetTitle("Eff #times Acc");
 	g_correction[0]->GetYaxis()->SetRangeUser(0, 0.5);
+	g_correction[0]->GetYaxis()->SetTitleOffset(1.6);
+
+
+	TLegend *tlegSectorAccEff = new TLegend(0.2, 0.5, 0.55, 0.8);
+	tlegSectorAccEff->SetLineColor(kWhite);
+
+	for (int i = 0; i < NSECT; i++)
+	{
+		tlegSectorAccEff->AddEntry(g_correction[i], sectorLabel[i].c_str(), "P");
+	}
 
 	g_correction[0]->Draw("AP");
 	g_correction[1]->Draw("P,same");
 	g_correction[2]->Draw("P,same");
 	g_correction[3]->Draw("P,same");
 	g_correction[4]->Draw("P,same");
-}
-
-void plotPhi()
-{
-	//Vertical lines at the location of anomalous ladders
-	TLine *tlcB0[3];
-	tlcB0[0] = new TLine(2.21, 0, 2.21, 0.015);
-	tlcB0[1] = new TLine(0.47, 0, 0.47, 0.015);
-	tlcB0[2] = new TLine(0.00, 0, 0.00, 0.015);
-
-	TBox *tbB0[3];
-	tbB0[0] = new TBox(2.21 - 0.57 / 2, 0.015, 2.21 + 0.57 / 2, 0.015);
-	tbB0[1] = new TBox(0.47 - 0.57 / 2, 0.015, 0.47 + 0.57 / 2, 0.015);
-	tbB0[2] = new TBox(0.0 - 0.57 / 2, 0.015, 0.0 + 0.57 / 2, 0.015);
-
-	TLine *tlcB1[8];
-	tlcB1[0] = new TLine(2.78, 0, 2.78, 0.015);
-	tlcB1[1] = new TLine(2.55, 0, 2.55, 0.015);
-	tlcB1[2] = new TLine(3.73, 0, 3.73, 0.015);
-	tlcB1[3] = new TLine(0.12, 0, 0.12, 0.015);
-	tlcB1[4] = new TLine(0.59, 0, 0.59, 0.015);
-	tlcB1[5] = new TLine(3.26, 0, 3.26, 0.015);
-	tlcB1[6] = new TLine(3.50, 0, 3.50, 0.015);
-	tlcB1[7] = new TLine(3.73, 0, 3.73, 0.015);
-
-	TCanvas *cPhiInclusive = new TCanvas("cPhiInclusive", "cPhiInclusive", 600, 600);
-
-	h_phi_data[0]->GetXaxis()->SetLabelFont(62);
-	h_phi_data[0]->GetXaxis()->SetTitleFont(62);
-	h_phi_data[0]->GetXaxis()->SetLabelSize(62);
-	h_phi_data[0]->GetXaxis()->SetLabelSize(0.04);
-	h_phi_data[0]->GetXaxis()->SetTitleSize(0.04);
-	h_phi_data[0]->GetXaxis()->SetTitle("Phi [rad]");
-
-	h_phi_data[0]->GetYaxis()->SetRangeUser(0, 0.05);
-	h_phi_data[0]->GetYaxis()->SetLabelFont(62);
-	h_phi_data[0]->GetYaxis()->SetTitleFont(62);
-	h_phi_data[0]->GetYaxis()->SetLabelSize(62);
-	h_phi_data[0]->GetYaxis()->SetLabelSize(0.04);
-	h_phi_data[0]->GetYaxis()->SetTitleSize(0.04);
-	h_phi_data[0]->GetYaxis()->SetTitle("A.U.");
-
-	h_phi_data[0]->Scale(1.0 / h_phi_data[0]->Integral());
-	h_phi_reco[0]->Scale(1.0 / h_phi_reco[0]->Integral());
-
-	h_phi_data[0]->SetTitle("");
-	h_phi_data[0]->Draw();
-	h_phi_reco[0]->SetLineColor(kRed);
-	h_phi_reco[0]->Draw("same");
-
-	tlcB0[0]->SetLineWidth(4);
-	tlcB0[0]->Draw("same");
-
-	tlcB0[1]->SetLineWidth(4);
-	tlcB0[1]->Draw("same");
-
-	tlcB0[2]->SetLineWidth(4);
-	tlcB0[2]->Draw("same");
-
-	//tbB0[0]->SetFillStyle(0);
-	//tbB0[0]->SetLineColor(2);
-	//tbB0[0]->SetLineWidth(2);
-
-	//tbB0[0]->Draw("same");
-	//tbB0[1]->Draw("l,same");
-	//tbB0[2]->Draw("l,same");
-
-	for (int i = 0; i < 8; i++)
-	{
-		tlcB1[i]->SetLineWidth(4);
-		tlcB1[i]->SetLineColor(kGreen + 3);
-		tlcB1[i]->Draw("same");
-	}
-}
-
-void plotChisq()
-{
-	TCanvas *cChisq = new TCanvas("cChisq", "Chisq/ndf for Each Sector", 800, 800);
-	cChisq->Divide(2, 2);
-
-	for (int i = 1; i < NSECT; i++)
-	{
-		cChisq->cd(i);
-		gPad->SetLogy();
-		h_chisqndf_data[i]->Rebin(4);
-		h_chisqndf_data[i]->SetLineColor(yieldColor[i]);
-		h_chisqndf_data[i]->SetLineWidth(2);
-		h_chisqndf_data[i]->SetTitle(sectorLabel[i].c_str());
-		h_chisqndf_data[i]->GetXaxis()->SetLabelFont(62);
-		h_chisqndf_data[i]->GetXaxis()->SetTitleFont(62);
-		h_chisqndf_data[i]->GetXaxis()->SetLabelSize(62);
-		h_chisqndf_data[i]->GetXaxis()->SetLabelSize(0.04);
-		h_chisqndf_data[i]->GetXaxis()->SetTitleSize(0.04);
-		h_chisqndf_data[i]->GetXaxis()->SetTitle("#chi^{2}/ndf");
-
-		h_chisqndf_data[i]->GetYaxis()->SetRangeUser(1e-4, 10);
-		h_chisqndf_data[i]->GetYaxis()->SetLabelFont(62);
-		h_chisqndf_data[i]->GetYaxis()->SetTitleFont(62);
-		h_chisqndf_data[i]->GetYaxis()->SetLabelSize(62);
-		h_chisqndf_data[i]->GetYaxis()->SetLabelSize(0.04);
-		h_chisqndf_data[i]->GetYaxis()->SetTitleSize(0.04);
-		h_chisqndf_data[i]->GetYaxis()->SetTitle("A.U.");
-		h_chisqndf_data[i]->Draw();
-	}
-
-	TCanvas *cChisqAll = new TCanvas("cChisqAll", "cChisqAll", 600, 600);
-	cChisqAll->SetLogy();
-	h_chisqndf_data[1]->Draw();
-	h_chisqndf_data[2]->Draw("same");
-	h_chisqndf_data[3]->Draw("same");
-	h_chisqndf_data[4]->Draw("same");
-
-	TLine *tlChisq = new TLine(3.0, 1e-4, 3.0, 10);
-	tlChisq->SetLineStyle(7);
-	tlChisq->Draw("same");
-}
-
-void plotEtaPreciseVtxCut()
-{
-	TCanvas *cEtaPrec = new TCanvas("cEtaPrec", "Eta for |zprec| < 1 cm", 600, 600);
-	h_eta_preccut_data->Rebin(2);
-	h_eta_preccut_reco->Rebin(2);
-	h_eta_preccut_data->SetLineWidth(2);
-	h_eta_preccut_reco->SetLineWidth(2);
-	h_eta_preccut_data->SetTitle("");
-	h_eta_preccut_data->GetXaxis()->SetLabelFont(62);
-	h_eta_preccut_data->GetXaxis()->SetTitleFont(62);
-	h_eta_preccut_data->GetXaxis()->SetLabelSize(62);
-	h_eta_preccut_data->GetXaxis()->SetLabelSize(0.04);
-	h_eta_preccut_data->GetXaxis()->SetTitleSize(0.04);
-	h_eta_preccut_data->GetXaxis()->SetTitle("#eta");
-
-	h_eta_preccut_data->GetYaxis()->SetLabelFont(62);
-	h_eta_preccut_data->GetYaxis()->SetTitleFont(62);
-	h_eta_preccut_data->GetYaxis()->SetLabelSize(62);
-	h_eta_preccut_data->GetYaxis()->SetLabelSize(0.04);
-	h_eta_preccut_data->GetYaxis()->SetTitleSize(0.04);
-	h_eta_preccut_data->GetYaxis()->SetTitle("A.U.");
-
-	h_eta_preccut_reco->SetLineColor(kBlue);
-	h_eta_preccut_data->SetLineColor(kRed);
-
-	h_eta_preccut_data->Draw();
-	h_eta_preccut_reco->Draw("same");
-
-	TLatex *tl1 = new TLatex(0.4, 0.2, "Unit Integral.");
-	tl1->SetNDC(kTRUE);
-	tl1->Draw("same");
-	TLatex *tl2 = new TLatex(0.4, 0.15, "|z_{prec}| < 1 cm");
-	tl2->SetNDC(kTRUE);
-	tl2->Draw("same");
-}
-
-void plotEta()
-{
-	TCanvas *cEta = new TCanvas("cEta", "Eta for Each Sector", 800, 800);
-	cEta->Divide(2, 2);
-
-	for (int i = 0; i < 4; i++)
-	{
-		cEta->cd(i + 1);
-
-		h_eta_regions_data[i]->Rebin(2);
-		h_eta_regions_reco[i]->Rebin(2);
-
-		h_eta_regions_data[i]->SetLineWidth(2);
-		h_eta_regions_data[i]->SetTitle(phiLabel[i].c_str());
-		h_eta_regions_data[i]->GetXaxis()->SetLabelFont(62);
-		h_eta_regions_data[i]->GetXaxis()->SetTitleFont(62);
-		h_eta_regions_data[i]->GetXaxis()->SetLabelSize(62);
-		h_eta_regions_data[i]->GetXaxis()->SetLabelSize(0.04);
-		h_eta_regions_data[i]->GetXaxis()->SetTitleSize(0.04);
-		h_eta_regions_data[i]->GetXaxis()->SetTitle("#eta");
-
-		h_eta_regions_data[i]->GetYaxis()->SetLabelFont(62);
-		h_eta_regions_data[i]->GetYaxis()->SetTitleFont(62);
-		h_eta_regions_data[i]->GetYaxis()->SetLabelSize(62);
-		h_eta_regions_data[i]->GetYaxis()->SetLabelSize(0.04);
-		h_eta_regions_data[i]->GetYaxis()->SetTitleSize(0.04);
-		h_eta_regions_data[i]->GetYaxis()->SetTitle("A.U.");
-
-		h_eta_regions_reco[i]->SetLineColor(kBlue);
-		h_eta_regions_data[i]->SetLineColor(kRed);
-
-		h_eta_regions_data[i]->Rebin(2);
-		h_eta_regions_reco[i]->Rebin(2);
-
-		//h_eta_regions_data[i]->Scale(1.0/h_eta_regions_data[i]->Integral());
-		//h_eta_regions_reco[i]->Scale(1.0/h_eta_regions_reco[i]->Integral());
-
-		float areaData = h_eta_regions_data[i]->Integral(h_eta_regions_data[i]->FindBin(-0.4), h_eta_regions_data[i]->FindBin(0.4));
-		float areaReco = h_eta_regions_reco[i]->Integral(h_eta_regions_reco[i]->FindBin(-0.4), h_eta_regions_reco[i]->FindBin(0.4));
-
-		cout << areaReco / areaData << endl;
-
-		h_eta_regions_data[i]->GetYaxis()->SetRangeUser(0, 0.11);
-		h_eta_regions_reco[i]->GetYaxis()->SetRangeUser(0, 0.11);
-
-		h_eta_regions_data[i]->GetXaxis()->SetRangeUser(-0.4, 0.4);
-		h_eta_regions_reco[i]->GetXaxis()->SetRangeUser(-0.4, 0.4);
-
-		h_eta_regions_data[i]->Draw();
-		h_eta_regions_reco[i]->Draw("same");
-	}
+	tlegSectorAccEff->Draw("same");
 }
 
 void ComputeInvariantYield()
@@ -673,11 +504,4 @@ void ComputeInvariantYield()
 	plotTruthReco();
 	plotInvariantYield();
 	plotEfficiencyCorrection();
-
-	//Plot other track variables
-	//plotPhi();
-	//plotChisq();
-	//plotEta();
-	plotEtaPreciseVtxCut();
-
 }
