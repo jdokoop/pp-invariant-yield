@@ -88,6 +88,17 @@ TH1F *h_zed_clusters_B3_sims;
 
 TH2F *h_eta_phi_sims;
 
+//Clock noise histograms
+TH1F *h_phi_clusters_B0_clock;
+TH1F *h_phi_clusters_B1_clock;
+TH1F *h_phi_clusters_B2_clock;
+TH1F *h_phi_clusters_B3_clock;
+
+TH1F *h_zed_clusters_B0_clock;
+TH1F *h_zed_clusters_B1_clock;
+TH1F *h_zed_clusters_B2_clock;
+TH1F *h_zed_clusters_B3_clock;
+
 //Ratio histograms
 TH1F *h_pT_ratio;
 
@@ -95,18 +106,48 @@ TH1F *h_pT_ratio;
 TTree *ntp_svxseg_true;
 TH1F *h_pT_ampt;
 
+//Azimuthal region limits
+const float WB_LO_PHI = -1 * TMath::Pi() / 2.0;
+const float WB_HI_PHI = 0;
+
+const float WT_LO_PHI = 0;
+const float WT_HI_PHI = TMath::Pi() / 2.0;
+
+const float ET_LO_PHI = TMath::Pi() / 2.0;
+const float ET_HI_PHI = TMath::Pi();
+
+const float EB_LO_PHI = TMath::Pi();
+const float EB_HI_PHI = 1.5 * TMath::Pi();
+
 //-----------------------------
 // Functions
 //-----------------------------
+
+void addClockNoiseToClusters()
+{
+	h_phi_clusters_B0_sims->Add(h_phi_clusters_B0_clock);
+	h_phi_clusters_B1_sims->Add(h_phi_clusters_B1_clock);
+	h_phi_clusters_B2_sims->Add(h_phi_clusters_B2_clock);
+	h_phi_clusters_B3_sims->Add(h_phi_clusters_B3_clock);
+
+	h_zed_clusters_B0_sims->Add(h_zed_clusters_B0_clock);
+	h_zed_clusters_B1_sims->Add(h_zed_clusters_B1_clock);
+	h_zed_clusters_B2_sims->Add(h_zed_clusters_B2_clock);
+	h_zed_clusters_B3_sims->Add(h_zed_clusters_B3_clock);
+}
 
 void normalizeEtaPhi()
 {
 	if (normIntegral)
 	{
-		//float normalizationSims = h_eta_phi_sims->Integral(1, h_eta_phi_sims->GetNbinsX(), h_eta_phi_sims->GetYaxis()->FindBin(0.0), h_eta_phi_sims->GetYaxis()->FindBin(1.2));
-		//float normalizationData = h_eta_phi_data->Integral(1, h_eta_phi_data->GetNbinsX(), h_eta_phi_data->GetYaxis()->FindBin(0.0), h_eta_phi_sims->GetYaxis()->FindBin(1.2));
-		float normalizationSims = h_eta_phi_sims->Integral();
-		float normalizationData = h_eta_phi_data->Integral();
+		//Normalize eta and phi to unity simultaneously using only the 'good' part of ET (2.4 < phi < pi)
+		float normalizationSims = h_eta_phi_sims->Integral(1, h_eta_phi_sims->GetNbinsX(), h_eta_phi_sims->GetYaxis()->FindBin(2.4), h_eta_phi_sims->GetYaxis()->FindBin(TMath::Pi()));
+		float normalizationData = h_eta_phi_data->Integral(1, h_eta_phi_data->GetNbinsX(), h_eta_phi_data->GetYaxis()->FindBin(2.4), h_eta_phi_data->GetYaxis()->FindBin(TMath::Pi()));
+
+		//Normalize to unity using all of the acceptance
+		//float normalizationSims = h_eta_phi_sims->Integral();
+		//float normalizationData = h_eta_phi_data->Integral();
+
 		h_eta_phi_sims->Scale(1.0 / normalizationSims);
 		h_eta_phi_data->Scale(1.0 / normalizationData);
 	}
@@ -126,7 +167,7 @@ void normalizeEtaPhi()
 	if (normIntegral)
 	{
 		hPhiSims->GetYaxis()->SetTitle("AU");
-		hPhiSims->GetYaxis()->SetRangeUser(0, 0.012);
+		hPhiSims->GetYaxis()->SetRangeUser(0, 0.06);
 	}
 	else
 	{
@@ -144,7 +185,7 @@ void normalizeEtaPhi()
 	float lineHeight = 0.008;
 	if (normIntegral)
 	{
-		lineHeight = 0.012;
+		lineHeight = 0.06;
 	}
 
 	TLine *tl1_azimuth = new TLine(0, 0, 0, lineHeight);
@@ -182,8 +223,43 @@ void normalizeEtaPhi()
 	tlegPhi->AddEntry(h_dPhi_sims, "AMPT RECO", "L");
 	tlegPhi->Draw("same");
 
+	//Draw labels to indicate the ratio of data/ampt area in each sector
+	float ratio_wb = (hPhiSims->Integral(hPhiSims->FindBin(WB_LO_PHI), hPhiSims->FindBin(WB_HI_PHI)))/(hPhiData->Integral(hPhiData->FindBin(WB_LO_PHI), hPhiData->FindBin(WB_HI_PHI)));
+	TLatex *tl1_wb_ratio = new TLatex(0.15, 0.75, Form("%g",ratio_wb));
+	tl1_wb_ratio->SetNDC(kTRUE);
+	tl1_wb_ratio->SetTextSize(0.03);
+	tl1_wb_ratio->SetTextColor(kGreen + 3);
+	tl1_wb_ratio->Draw("same");
+
+	float ratio_wt = (hPhiSims->Integral(hPhiSims->FindBin(WT_LO_PHI), hPhiSims->FindBin(WT_HI_PHI)))/(hPhiData->Integral(hPhiData->FindBin(WT_LO_PHI), hPhiData->FindBin(WT_HI_PHI)));
+	TLatex *tl1_wt_ratio = new TLatex(0.4, 0.75, Form("%g",ratio_wt));
+	tl1_wt_ratio->SetNDC(kTRUE);
+	tl1_wt_ratio->SetTextSize(0.03);
+	tl1_wt_ratio->SetTextColor(kGreen + 3);
+	tl1_wt_ratio->Draw("same");
+
+	float ratio_et = (hPhiSims->Integral(hPhiSims->FindBin(ET_LO_PHI), hPhiSims->FindBin(ET_HI_PHI)))/(hPhiData->Integral(hPhiData->FindBin(ET_LO_PHI), hPhiData->FindBin(ET_HI_PHI)));
+	TLatex *tl1_et_ratio = new TLatex(0.57, 0.75, Form("All ET: %g",ratio_et));
+	tl1_et_ratio->SetNDC(kTRUE);
+	tl1_et_ratio->SetTextSize(0.03);
+	tl1_et_ratio->SetTextColor(kGreen + 3);
+	tl1_et_ratio->Draw("same");
+
+	float ratio_et_good = (hPhiSims->Integral(hPhiSims->FindBin(2.4), hPhiSims->FindBin(ET_HI_PHI)))/(hPhiData->Integral(hPhiData->FindBin(2.4), hPhiData->FindBin(ET_HI_PHI)));
+	TLatex *tl1_et_ratio_good = new TLatex(0.57, 0.7, Form("Good ET: %g",ratio_et_good));
+	tl1_et_ratio_good->SetNDC(kTRUE);
+	tl1_et_ratio_good->SetTextSize(0.03);
+	tl1_et_ratio_good->SetTextColor(kGreen + 3);
+	//tl1_et_ratio_good->Draw("same");
+
+	float ratio_eb = (hPhiSims->Integral(hPhiSims->FindBin(EB_LO_PHI), hPhiSims->FindBin(EB_HI_PHI)))/(hPhiData->Integral(hPhiData->FindBin(EB_LO_PHI), hPhiData->FindBin(EB_HI_PHI)));
+	TLatex *tl1_eb_ratio = new TLatex(0.75, 0.75, Form("%g",ratio_eb));
+	tl1_eb_ratio->SetNDC(kTRUE);
+	tl1_eb_ratio->SetTextSize(0.03);
+	tl1_eb_ratio->SetTextColor(kGreen + 3);
+	tl1_eb_ratio->Draw("same");
+
 	//Project eta for each of the azimuthal regions of interest
-	
 	TH1F *hEta_ETData = (TH1F*) h_eta_phi_data->ProjectionX("hEta_ETData", h_eta_phi_data->GetYaxis()->FindBin(TMath::Pi() / 2), h_eta_phi_data->GetYaxis()->FindBin(TMath::Pi()));
 	TH1F *hEta_EBData = (TH1F*) h_eta_phi_data->ProjectionX("hEta_EBData", h_eta_phi_data->GetYaxis()->FindBin(TMath::Pi()), h_eta_phi_data->GetNbinsY());
 	TH1F *hEta_WTData = (TH1F*) h_eta_phi_data->ProjectionX("hEta_WTData", h_eta_phi_data->GetYaxis()->FindBin(0.0), h_eta_phi_data->GetYaxis()->FindBin(TMath::Pi() / 2));
@@ -193,7 +269,7 @@ void normalizeEtaPhi()
 	TH1F *hEta_EBSims = (TH1F*) h_eta_phi_sims->ProjectionX("hEta_EBSims", h_eta_phi_sims->GetYaxis()->FindBin(TMath::Pi()), h_eta_phi_sims->GetNbinsY());
 	TH1F *hEta_WTSims = (TH1F*) h_eta_phi_sims->ProjectionX("hEta_WTSims", h_eta_phi_sims->GetYaxis()->FindBin(0.0), h_eta_phi_sims->GetYaxis()->FindBin(TMath::Pi() / 2));
 	TH1F *hEta_WBSims = (TH1F*) h_eta_phi_sims->ProjectionX("hEta_WBSims", 1, h_eta_phi_sims->GetYaxis()->FindBin(0.0));
-	
+
 	/*
 
 	//Project eta for each azimuthal region of interest, excluding the anomalous phi regions in the west arms:
@@ -616,6 +692,7 @@ void plotEta()
 
 void plotClusters()
 {
+	//2D plot of spatial cluster distribution
 	TCanvas *cClustersB0 = new TCanvas("cClustersB0", "cClustersB0", 1000, 500);
 	cClustersB0->Divide(2, 1);
 
@@ -646,6 +723,7 @@ void plotClusters()
 	h_clusters_B2_sims->SetTitle("B2 - AMPT");
 	h_clusters_B2_sims->Draw("COLZ");
 
+	//Azimuthal distribution of clusters
 	TCanvas *cClustersPhi = new TCanvas("cClustersPhi", "cClustersPhi", 700, 700);
 	cClustersPhi->Divide(2, 2);
 
@@ -714,6 +792,7 @@ void plotClusters()
 
 	cout << "B3 Ratio = " << h_zed_clusters_B3_data->Integral() / h_zed_clusters_B3_sims->Integral() << endl;
 
+	//Longitudinal distribution of clusters
 	TCanvas *cClustersZed = new TCanvas("cClustersEta", "cClustersEta", 700, 700);
 	cClustersZed->Divide(2, 2);
 
@@ -868,7 +947,7 @@ void CompareTrackVariables()
 {
 	gStyle->SetOptStat(0);
 
-	TFile *f_data = new TFile("WorkingFiles/trackvars_data_def.root");
+	TFile *f_data = new TFile("WorkingFiles/trackvars_data_def_temp.root");
 
 	h_dPhi_data          = (TH1F*) f_data->Get("h_dPhi");
 	h_dPhi_data_lowpT    = (TH1F*) f_data->Get("h_dPhi_lowpT");
@@ -898,7 +977,7 @@ void CompareTrackVariables()
 	h_zed_clusters_B3_data    = (TH1F*) f_data->Get("h_zed_clusters_B3");
 	h_eta_phi_data            = (TH2F*) f_data->Get("h_eta_phi");
 
-	TFile *f_sims = new TFile("WorkingFiles/trackvars_sims_def.root");
+	TFile *f_sims = new TFile("WorkingFiles/trackvars_sims_def_temp.root");
 
 	h_dPhi_sims          = (TH1F*) f_sims->Get("h_dPhi");
 	h_dPhi_sims_lowpT    = (TH1F*) f_sims->Get("h_dPhi_lowpT");
@@ -927,6 +1006,16 @@ void CompareTrackVariables()
 	h_zed_clusters_B2_sims    = (TH1F*) f_sims->Get("h_zed_clusters_B2");
 	h_zed_clusters_B3_sims    = (TH1F*) f_sims->Get("h_zed_clusters_B3");
 	h_eta_phi_sims            = (TH2F*) f_sims->Get("h_eta_phi");
+
+	TFile *f_clock = new TFile("WorkingFiles/trackvars_clock_def.root");
+	h_phi_clusters_B0_clock    = (TH1F*) f_clock->Get("h_phi_clusters_B0");
+	h_phi_clusters_B1_clock    = (TH1F*) f_clock->Get("h_phi_clusters_B1");
+	h_phi_clusters_B2_clock    = (TH1F*) f_clock->Get("h_phi_clusters_B2");
+	h_phi_clusters_B3_clock    = (TH1F*) f_clock->Get("h_phi_clusters_B3");
+	h_zed_clusters_B0_clock    = (TH1F*) f_clock->Get("h_zed_clusters_B0");
+	h_zed_clusters_B1_clock    = (TH1F*) f_clock->Get("h_zed_clusters_B1");
+	h_zed_clusters_B2_clock    = (TH1F*) f_clock->Get("h_zed_clusters_B2");
+	h_zed_clusters_B3_clock    = (TH1F*) f_clock->Get("h_zed_clusters_B3");
 
 	//AMPT data
 	TFile *f_ampt = new TFile("Data/ampt_pp_true_1.root");
@@ -981,10 +1070,8 @@ void CompareTrackVariables()
 	h_dca2d_sims->SetLineWidth(2);
 	h_pT_sims->SetLineWidth(2);
 
-	//Plot things
-	//plotPhi();
-	//plotEta();
 	normalizeEtaPhi(); //Simultaneous normalization of eta and phi distributions
+	addClockNoiseToClusters();
 	plotClusters();
 	plotTrackVariables();
 }
